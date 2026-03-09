@@ -1,0 +1,96 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code when working in the Buttprint API repository.
+
+## What This Is
+
+Go HTTP service. The brains of [Buttprint](../docs/buttprint.md). Sits between the SvelteKit FE and the private Jackfruit data API:
+
+```
+Browser (FE) → Buttprint API (this, public) → Jackfruit (Go, private network)
+```
+
+Accepts `(lat, lon, timestamp)` from the FE (or resolves location from request IP), queries Jackfruit for raw environmental data, normalizes scores, generates a parametric SVG butt, returns SVG + metadata.
+
+**Full spec:** [docs/buttprint-api-spec.md](../docs/buttprint-api-spec.md)
+
+## Commands
+
+```bash
+# (stubs — fill in as project is scaffolded)
+go run ./cmd/buttprint              # Start server (default port 8080)
+go build -o bin/buttprint ./cmd/buttprint  # Build binary
+go test ./...                       # Run all tests
+go vet ./...                        # Static analysis
+make test                           # All tests (when Makefile exists)
+```
+
+Go 1.23+. Net/http standard library (or Chi/Echo if needed). No CGO.
+
+## Architecture
+
+### Module layout (planned)
+
+```
+cmd/
+└── buttprint/
+    └── main.go                 ← entry point, HTTP server setup
+
+internal/
+├── api/
+│   ├── handler.go              ← HTTP handler for /buttprint
+│   └── middleware.go           ← rate limiting, CORS, logging
+├── geoloc/
+│   ├── resolver.go             ← interface: Resolver { Resolve(ip) → (lat, lon, name) }
+│   └── maxmind.go              ← MaxMind GeoLite2 implementation
+├── jackfruit/
+│   └── client.go               ← HTTP client for Jackfruit API
+├── scoring/
+│   └── scorer.go               ← normalization + composite scoring
+└── render/
+    ├── renderer.go             ← interface: Renderer { Render(scores) → SVG string }
+    └── svg.go                  ← parametric SVG implementation
+```
+
+### API contract
+
+```
+GET /buttprint?lat={float}&lon={float}&timestamp={RFC3339}
+GET /health  → 204 No Content
+```
+
+All params optional — no coords triggers IP geolocation, no timestamp defaults to now.
+
+### Jackfruit integration
+
+```
+GET jackfruit:8080/v1/environmental?lat=X&lon=Y&timestamp=T&variables=pm2p5,pm10,temperature,humidity
+```
+
+Called over private K8s network (ClusterIP). Pass Jackfruit's `variables` array through to the FE response. Lineage (`lineage` field per variable) is optional — Jackfruit returns null when Postgres lookup fails; treat as nullable throughout.
+
+### Scoring
+
+Three sub-scores → composite:
+- **Thickness** — temperature + humidity
+- **Sweatiness** — humidity + temperature interaction
+- **Irritation** — PM2.5, PM10
+
+Missing variables get neutral score (0.5) so the butt renders with whatever data is available.
+
+## Key Design Decisions
+
+- **Interfaces for swappability:** `Resolver` for IP geoloc (MVP: MaxMind GeoLite2), `Renderer` for SVG (MVP: parametric SVG, future: ASCII, diffusion). Design against the interface, not the implementation.
+- **Lineage pass-through:** Don't flatten Jackfruit's per-variable response. Each variable carries its own `ref_timestamp`, `actual_lat/lon`, and `lineage` because variables may come from different datasets or grids.
+- **Temperature unit conversion:** Jackfruit returns temperature in Kelvin. Convert K → °C before scoring and before including in FE response.
+- **Rate limiting:** In-memory per-IP (MVP). `golang.org/x/time/rate` token bucket. Behind an interface for future Redis upgrade.
+
+## Go Conventions
+
+- `internal/` for all non-exported packages
+- Explicit error handling — no panics in request path
+- Context propagation for cancellation
+- `slog` with JSON handler for structured logging
+- Environment variables for all configuration
+- Standard library HTTP server with Go 1.22+ routing: `mux.HandleFunc("GET /path", handler)`
+- Timestamps: `time.RFC3339` constant, `time.Parse` / `time.Format`
