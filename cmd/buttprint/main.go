@@ -24,8 +24,9 @@ func newApp() (*app, error) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
-	cfg := config.Load()
 	slog.SetDefault(logger)
+
+	cfg := config.Load()
 
 	mux := http.NewServeMux()
 	api.NewHandler().RegisterRoutes(mux)
