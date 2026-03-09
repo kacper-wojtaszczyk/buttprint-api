@@ -4,7 +4,7 @@ import "os"
 
 type Config struct {
 	Port         string
-	JackfruitUrl string
+	JackfruitURL string
 }
 
 func getEnv(key, fallback string) string {
@@ -18,6 +18,6 @@ func getEnv(key, fallback string) string {
 func Load() *Config {
 	return &Config{
 		Port:         getEnv("PORT", "8080"),
-		JackfruitUrl: getEnv("JACKFRUIT_URL", "localhost:8080"),
+		JackfruitURL: getEnv("JACKFRUIT_URL", "http://localhost:8080"),
 	}
 }

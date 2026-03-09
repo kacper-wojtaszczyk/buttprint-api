@@ -1,16 +1,14 @@
-package api_test
+package api
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/kacper-wojtaszczyk/buttprint-api/internal/api"
 )
 
 func TestHealthHandler(t *testing.T) {
 	mux := http.NewServeMux()
-	api.NewHandler().RegisterRoutes(mux)
+	NewHandler().RegisterRoutes(mux)
 
 	req := httptest.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()

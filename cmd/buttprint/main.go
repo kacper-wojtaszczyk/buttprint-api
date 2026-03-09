@@ -20,12 +20,11 @@ type app struct {
 	server *http.Server
 }
 
-func newApp() *app {
-
-	cfg := config.Load()
+func newApp() (*app, error) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
+	cfg := config.Load()
 	slog.SetDefault(logger)
 
 	mux := http.NewServeMux()
@@ -42,7 +41,7 @@ func newApp() *app {
 		cfg:    cfg,
 		logger: logger,
 		server: server,
-	}
+	}, nil
 }
 
 func (a *app) run() {
@@ -53,6 +52,7 @@ func (a *app) run() {
 			os.Exit(1)
 		}
 	}()
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -72,6 +72,10 @@ func (a *app) shutdown(ctx context.Context) {
 }
 
 func main() {
-	a := newApp()
+	a, err := newApp()
+	if err != nil {
+		slog.Error("failed to start the app", "error", err)
+		os.Exit(1)
+	}
 	a.run()
 }
