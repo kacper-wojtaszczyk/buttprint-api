@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,7 +46,7 @@ func stubButtprint() domain.Buttprint {
 
 func TestHealthHandler(t *testing.T) {
 	mux := http.NewServeMux()
-	NewHandler(nil, nil).RegisterRoutes(mux)
+	newTestHandler(nil).RegisterRoutes(mux)
 
 	req := httptest.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()
@@ -163,6 +164,10 @@ func TestHandleButtprint_ResponseShape(t *testing.T) {
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
+	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
+		t.Errorf("expected Content-Type application/json, got %q", ct)
+	}
+
 	var resp ButtprintResponse
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
@@ -177,6 +182,10 @@ func TestHandleButtprint_ResponseShape(t *testing.T) {
 	if resp.Location.Source != "explicit" {
 		t.Errorf("expected source 'explicit', got %q", resp.Location.Source)
 	}
+	expectedTimestamp := time.Date(2026, 3, 8, 14, 0, 0, 0, time.UTC)
+	if !resp.RequestedTimestamp.Equal(expectedTimestamp) {
+		t.Errorf("expected requested_timestamp %v, got %v", expectedTimestamp, resp.RequestedTimestamp)
+	}
 	// Verifies the Irritation bug fix — was previously set to Sweatiness value
 	if resp.Score.Irritation != 0.3 {
 		t.Errorf("expected irritation 0.3, got %v", resp.Score.Irritation)
@@ -189,6 +198,57 @@ func TestHandleButtprint_ResponseShape(t *testing.T) {
 	}
 	if len(resp.Variables) != 1 {
 		t.Errorf("expected 1 variable, got %d", len(resp.Variables))
+	}
+}
+
+func TestHandleButtprint_ErrorResponseShape(t *testing.T) {
+	tests := []struct {
+		name      string
+		url       string
+		wantError string
+	}{
+		{
+			name:      "missing coords",
+			url:       "/buttprint",
+			wantError: "coords are required (for now)",
+		},
+		{
+			name:      "invalid lat",
+			url:       "/buttprint?lat=abc&lon=13.40",
+			wantError: "invalid lat: must be a number",
+		},
+		{
+			name:      "invalid timestamp",
+			url:       "/buttprint?lat=52.52&lon=13.40&timestamp=not-a-date",
+			wantError: "invalid timestamp: must be RFC 3339 format",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newTestHandler(&mockButtprintProvider{result: stubButtprint()})
+			mux := http.NewServeMux()
+			h.RegisterRoutes(mux)
+
+			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, req)
+
+			if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
+				t.Errorf("expected Content-Type application/json, got %q", ct)
+			}
+
+			var errResp ErrorResponse
+			if err := json.NewDecoder(rec.Body).Decode(&errResp); err != nil {
+				t.Fatalf("failed to decode error response: %v", err)
+			}
+			if errResp.Error == "" {
+				t.Error("expected non-empty error message")
+			}
+			if !strings.Contains(errResp.Error, tt.wantError) {
+				t.Errorf("expected error containing %q, got %q", tt.wantError, errResp.Error)
+			}
+		})
 	}
 }
 

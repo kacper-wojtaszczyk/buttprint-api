@@ -50,7 +50,7 @@ func (e *EnvironmentalDataProviderStub) GetEnvironmentalData(ctx context.Context
 
 type ScorerStub struct{}
 
-func (s *ScorerStub) Score(variableData []VariableData) (Score, error) {
+func (s *ScorerStub) Calculate(variableData []VariableData) (Score, error) {
 	return Score{
 		Composite:  0.5,
 		Thickness:  0.5,

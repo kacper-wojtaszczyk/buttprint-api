@@ -36,41 +36,43 @@ func (h *Handler) handleHealth(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (h *Handler) handleButtprint(w http.ResponseWriter, r *http.Request) {
-	br, err := ParseButtprintRequest(r)
+	br, err := parseButtprintRequest(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	var coords Coords
+	var c coords
 	if br.Coords != nil {
-		coords = *br.Coords
+		c = *br.Coords
 	} else {
 		writeError(w, http.StatusBadRequest, "coords are required (for now)")
 		return
 	}
 
-	var timestamp time.Time
+	var ts time.Time
 	if br.Timestamp != nil {
-		timestamp = *br.Timestamp
+		ts = *br.Timestamp
 	} else {
-		timestamp = time.Now()
+		ts = time.Now()
 	}
 
-	buttprint, err := h.buttprintProvider.GetButtprint(r.Context(), coords.Lat, coords.Lon, timestamp)
+	buttprint, err := h.buttprintProvider.GetButtprint(r.Context(), c.Lat, c.Lon, ts)
 	if err != nil {
-		h.logger.Error("retrieving Buttprint failed", "error", err)
 		if _, ok := errors.AsType[domain.ErrNoData](err); ok {
 			writeError(w, http.StatusNotFound, "no data available for this location and time")
+			return
+		}
+		h.logger.Error("retrieving Buttprint failed", "error", err)
+		if errors.Is(err, context.DeadlineExceeded) {
+			writeError(w, http.StatusGatewayTimeout, "request timed out")
 		} else if _, ok := errors.AsType[domain.ErrUpstream](err); ok {
 			writeError(w, http.StatusBadGateway, "upstream service error")
-		} else if errors.Is(err, context.DeadlineExceeded) {
-			writeError(w, http.StatusGatewayTimeout, "request timed out")
 		} else {
 			writeError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
 
-	writeJSON(w, http.StatusOK, newButtprintResponse(buttprint, coords, timestamp))
+	writeJSON(w, http.StatusOK, newButtprintResponse(buttprint, c, ts))
 }

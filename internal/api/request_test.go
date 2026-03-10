@@ -105,7 +105,7 @@ func TestParseButtprintRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/?"+tt.query, nil)
-			br, err := ParseButtprintRequest(req)
+			br, err := parseButtprintRequest(req)
 
 			if tt.wantErr {
 				if err == nil {
@@ -141,16 +141,41 @@ func TestParseButtprintRequest(t *testing.T) {
 }
 
 func TestParseButtprintRequest_TimestampParsed(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/?lat=52.52&lon=13.40&timestamp=2026-03-08T14:00:00Z", nil)
-	br, err := ParseButtprintRequest(req)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	tests := []struct {
+		name      string
+		timestamp string
+		expected  time.Time
+	}{
+		{
+			name:      "UTC with Z",
+			timestamp: "2026-03-08T14:00:00Z",
+			expected:  time.Date(2026, 3, 8, 14, 0, 0, 0, time.UTC),
+		},
+		{
+			name:      "positive timezone offset",
+			timestamp: "2026-03-08T14:00:00%2B02:00", // + must be URL-encoded in query strings
+			expected:  time.Date(2026, 3, 8, 14, 0, 0, 0, time.FixedZone("", 2*60*60)),
+		},
+		{
+			name:      "negative timezone offset",
+			timestamp: "2026-03-08T14:00:00-05:00",
+			expected:  time.Date(2026, 3, 8, 14, 0, 0, 0, time.FixedZone("", -5*60*60)),
+		},
 	}
-	if br.Timestamp == nil {
-		t.Fatal("expected timestamp, got nil")
-	}
-	expected := time.Date(2026, 3, 8, 14, 0, 0, 0, time.UTC)
-	if !br.Timestamp.Equal(expected) {
-		t.Errorf("expected %v, got %v", expected, *br.Timestamp)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/?lat=52.52&lon=13.40&timestamp="+tt.timestamp, nil)
+			br, err := parseButtprintRequest(req)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if br.Timestamp == nil {
+				t.Fatal("expected timestamp, got nil")
+			}
+			if !br.Timestamp.Equal(tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, *br.Timestamp)
+			}
+		})
 	}
 }

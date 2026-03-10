@@ -24,6 +24,7 @@ type ButtprintResponse struct {
 type LocationResponse struct {
 	Lat    float64 `json:"lat"`
 	Lon    float64 `json:"lon"`
+	Name   string  `json:"name,omitempty"`
 	Source string  `json:"source"`
 }
 
@@ -50,7 +51,7 @@ type LineageResponse struct {
 	RawFileID uuid.UUID `json:"raw_file_id"`
 }
 
-func newButtprintResponse(buttprint domain.Buttprint, coords Coords, timestamp time.Time) ButtprintResponse {
+func newButtprintResponse(buttprint domain.Buttprint, coords coords, timestamp time.Time) ButtprintResponse {
 	variables := make([]VariableResponse, len(buttprint.Variables))
 	for i, v := range buttprint.Variables {
 		variables[i] = newVariableResponse(v)

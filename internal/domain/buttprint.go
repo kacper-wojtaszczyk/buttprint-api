@@ -41,7 +41,7 @@ type EnvironmentalDataProvider interface {
 }
 
 type Scorer interface {
-	Score(variableData []VariableData) (Score, error)
+	Calculate(variableData []VariableData) (Score, error)
 }
 
 type Renderer interface {
@@ -68,7 +68,7 @@ func (s *Service) GetButtprint(ctx context.Context, lat, lon float64, timestamp 
 		return Buttprint{}, err
 	}
 
-	scores, err := s.scorer.Score(variables)
+	scores, err := s.scorer.Calculate(variables)
 	if err != nil {
 		return Buttprint{}, err
 	}
