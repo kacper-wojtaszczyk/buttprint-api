@@ -62,8 +62,7 @@ func (s *ScorerStub) Score(variableData []VariableData) (Score, error) {
 type RendererStub struct{}
 
 func (r *RendererStub) Render(scores Score) (string, error) {
-	return `
-<svg width="200" height="200" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+	return `<svg width="200" height="200" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <radialGradient id="peachGrad" cx="40%" cy="35%" r="70%">
       <stop offset="0%" stop-color="#FFD0D0"/>

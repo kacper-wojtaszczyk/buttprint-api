@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -30,7 +31,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /buttprint", h.handleButtprint)
 }
 
-func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -59,44 +60,17 @@ func (h *Handler) handleButtprint(w http.ResponseWriter, r *http.Request) {
 	buttprint, err := h.buttprintProvider.GetButtprint(r.Context(), coords.Lat, coords.Lon, timestamp)
 	if err != nil {
 		h.logger.Error("retrieving Buttprint failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		if _, ok := errors.AsType[domain.ErrNoData](err); ok {
+			writeError(w, http.StatusNotFound, "no data available for this location and time")
+		} else if _, ok := errors.AsType[domain.ErrUpstream](err); ok {
+			writeError(w, http.StatusBadGateway, "upstream service error")
+		} else if errors.Is(err, context.DeadlineExceeded) {
+			writeError(w, http.StatusGatewayTimeout, "request timed out")
+		} else {
+			writeError(w, http.StatusInternalServerError, "internal server error")
+		}
+		return
 	}
 
-	response := ButtprintResponse{
-		Location: LocationResponse{
-			Lat:    coords.Lat,
-			Lon:    coords.Lon,
-			Source: "explicit",
-		},
-		RequestedTimestamp: timestamp,
-		Variables:          make([]VariableResponse, len(buttprint.Variables)),
-		Score: ScoreResponse{
-			Composite:  buttprint.Score.Composite,
-			Thickness:  buttprint.Score.Thickness,
-			Sweatiness: buttprint.Score.Sweatiness,
-			Irritation: buttprint.Score.Sweatiness,
-		},
-		SVG: buttprint.SVG,
-	}
-	for i, variable := range buttprint.Variables {
-		var lineageResponse *LineageResponse
-		if variable.Lineage != nil {
-			lineageResponse = &LineageResponse{
-				Source:    variable.Lineage.Source,
-				Dataset:   variable.Lineage.Dataset,
-				RawFileID: variable.Lineage.RawFileID,
-			}
-		}
-		response.Variables[i] = VariableResponse{
-			Name:         variable.Name,
-			Value:        variable.Value,
-			Unit:         variable.Unit,
-			RefTimestamp: variable.RefTimestamp,
-			ActualLat:    variable.ActualLat,
-			ActualLon:    variable.ActualLon,
-			Lineage:      lineageResponse,
-		}
-	}
-
-	writeJSON(w, http.StatusOK, response)
+	writeJSON(w, http.StatusOK, newButtprintResponse(buttprint, coords, timestamp))
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kacper-wojtaszczyk/buttprint-api/internal/domain"
 )
 
 type ErrorResponse struct {
@@ -47,6 +48,49 @@ type LineageResponse struct {
 	Source    string    `json:"source"`
 	Dataset   string    `json:"dataset"`
 	RawFileID uuid.UUID `json:"raw_file_id"`
+}
+
+func newButtprintResponse(buttprint domain.Buttprint, coords Coords, timestamp time.Time) ButtprintResponse {
+	variables := make([]VariableResponse, len(buttprint.Variables))
+	for i, v := range buttprint.Variables {
+		variables[i] = newVariableResponse(v)
+	}
+	return ButtprintResponse{
+		Location: LocationResponse{
+			Lat:    coords.Lat,
+			Lon:    coords.Lon,
+			Source: "explicit",
+		},
+		RequestedTimestamp: timestamp,
+		Variables:          variables,
+		Score: ScoreResponse{
+			Composite:  buttprint.Score.Composite,
+			Thickness:  buttprint.Score.Thickness,
+			Sweatiness: buttprint.Score.Sweatiness,
+			Irritation: buttprint.Score.Irritation,
+		},
+		SVG: buttprint.SVG,
+	}
+}
+
+func newVariableResponse(v domain.VariableData) VariableResponse {
+	var lineage *LineageResponse
+	if v.Lineage != nil {
+		lineage = &LineageResponse{
+			Source:    v.Lineage.Source,
+			Dataset:   v.Lineage.Dataset,
+			RawFileID: v.Lineage.RawFileID,
+		}
+	}
+	return VariableResponse{
+		Name:         v.Name,
+		Value:        v.Value,
+		Unit:         v.Unit,
+		RefTimestamp: v.RefTimestamp,
+		ActualLat:    v.ActualLat,
+		ActualLon:    v.ActualLon,
+		Lineage:      lineage,
+	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, data any) {

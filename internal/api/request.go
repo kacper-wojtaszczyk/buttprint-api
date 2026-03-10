@@ -28,6 +28,13 @@ func ParseButtprintRequest(r *http.Request) (*ButtprintRequest, error) {
 		return nil, err
 	}
 
+	if lat != nil && (*lat < -90 || *lat > 90) {
+		return nil, fmt.Errorf("lat must be between -90 and 90, got %v", *lat)
+	}
+	if lon != nil && (*lon < -180 || *lon > 180) {
+		return nil, fmt.Errorf("lon must be between -180 and 180, got %v", *lon)
+	}
+
 	var coords *Coords
 
 	if lat == nil && lon == nil {
