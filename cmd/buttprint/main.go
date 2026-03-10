@@ -12,6 +12,7 @@ import (
 
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/api"
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/config"
+	"github.com/kacper-wojtaszczyk/buttprint-api/internal/domain"
 )
 
 type app struct {
@@ -28,8 +29,14 @@ func newApp() (*app, error) {
 
 	cfg := config.Load()
 
+	service := domain.NewService(
+		&domain.EnvironmentalDataProviderStub{},
+		&domain.ScorerStub{},
+		&domain.RendererStub{},
+	)
+
 	mux := http.NewServeMux()
-	api.NewHandler().RegisterRoutes(mux)
+	api.NewHandler(service, logger.With("component", "api")).RegisterRoutes(mux)
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      mux,
