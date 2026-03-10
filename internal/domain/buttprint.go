@@ -68,19 +68,19 @@ func (s *Service) GetButtprint(ctx context.Context, lat, lon float64, timestamp 
 		return Buttprint{}, err
 	}
 
-	scores, err := s.scorer.Calculate(variables)
+	score, err := s.scorer.Calculate(variables)
 	if err != nil {
 		return Buttprint{}, err
 	}
 
-	svg, err := s.renderer.Render(scores)
+	svg, err := s.renderer.Render(score)
 	if err != nil {
 		return Buttprint{}, err
 	}
 
 	return Buttprint{
 		Variables: variables,
-		Score:     scores,
+		Score:     score,
 		SVG:       svg,
 	}, nil
 }
