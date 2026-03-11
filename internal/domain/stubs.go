@@ -7,7 +7,7 @@ import (
 
 type EnvironmentalDataProviderStub struct{}
 
-func (e *EnvironmentalDataProviderStub) GetEnvironmentalData(ctx context.Context, lat, lon float64, timestamp time.Time) ([]VariableData, error) {
+func (e *EnvironmentalDataProviderStub) GetEnvironmentalData(ctx context.Context, lat, lon float64, timestamp time.Time, variables []string) ([]VariableData, error) {
 	return []VariableData{
 		{
 			Name:         "temperature",
@@ -49,6 +49,10 @@ func (e *EnvironmentalDataProviderStub) GetEnvironmentalData(ctx context.Context
 }
 
 type ScorerStub struct{}
+
+func (s *ScorerStub) RequiredVariables() []string {
+	return []string{"temperature", "humidity", "pm2p5", "pm10"}
+}
 
 func (s *ScorerStub) Calculate(variableData []VariableData) (Score, error) {
 	return Score{
