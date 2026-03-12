@@ -37,11 +37,12 @@ type Score struct {
 }
 
 type EnvironmentalDataProvider interface {
-	GetEnvironmentalData(ctx context.Context, lat, lon float64, timestamp time.Time) ([]VariableData, error)
+	GetEnvironmentalData(ctx context.Context, lat, lon float64, timestamp time.Time, variables []string) ([]VariableData, error)
 }
 
 type Scorer interface {
 	Calculate(variableData []VariableData) (Score, error)
+	RequiredVariables() []string
 }
 
 type Renderer interface {
@@ -63,7 +64,7 @@ func NewService(environmentalDataProvider EnvironmentalDataProvider, scorer Scor
 }
 
 func (s *Service) GetButtprint(ctx context.Context, lat, lon float64, timestamp time.Time) (Buttprint, error) {
-	variables, err := s.environmentalDataProvider.GetEnvironmentalData(ctx, lat, lon, timestamp)
+	variables, err := s.environmentalDataProvider.GetEnvironmentalData(ctx, lat, lon, timestamp, s.scorer.RequiredVariables())
 	if err != nil {
 		return Buttprint{}, err
 	}

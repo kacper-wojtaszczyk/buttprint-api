@@ -1,5 +1,37 @@
+# Secrets / local config
 .env
+.env.*
 .claude/CLAUDE.local.md
-/.idea/
-.DS_Store
+
+# Go build artifacts
 bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go test binaries and output
+*.test
+*.out
+
+# Go test coverage
+coverage.out
+coverage.html
+
+# Go profiling
+*.prof
+
+# Dependency vendor dir (regenerated via go mod vendor)
+vendor/
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# JetBrains / GoLand
+/.idea/
