@@ -64,7 +64,7 @@ func NewService(environmentalDataProvider EnvironmentalDataProvider, scorer Scor
 }
 
 func (s *Service) GetButtprint(ctx context.Context, lat, lon float64, timestamp time.Time) (Buttprint, error) {
-	variables, err := s.environmentalDataProvider.GetEnvironmentalData(ctx, lat, lon, timestamp, nil)
+	variables, err := s.environmentalDataProvider.GetEnvironmentalData(ctx, lat, lon, timestamp, s.scorer.RequiredVariables())
 	if err != nil {
 		return Buttprint{}, err
 	}

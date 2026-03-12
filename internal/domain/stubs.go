@@ -10,24 +10,6 @@ type EnvironmentalDataProviderStub struct{}
 func (e *EnvironmentalDataProviderStub) GetEnvironmentalData(ctx context.Context, lat, lon float64, timestamp time.Time, variables []string) ([]VariableData, error) {
 	return []VariableData{
 		{
-			Name:         "temperature",
-			Value:        25,
-			Unit:         "°C",
-			RefTimestamp: timestamp,
-			ActualLat:    lat,
-			ActualLon:    lon,
-			Lineage:      nil,
-		},
-		{
-			Name:         "humidity",
-			Value:        40,
-			Unit:         "%",
-			RefTimestamp: timestamp,
-			ActualLat:    lat,
-			ActualLon:    lon,
-			Lineage:      nil,
-		},
-		{
 			Name:         "pm2p5",
 			Value:        10,
 			Unit:         "µg/m³",
@@ -51,7 +33,7 @@ func (e *EnvironmentalDataProviderStub) GetEnvironmentalData(ctx context.Context
 type ScorerStub struct{}
 
 func (s *ScorerStub) RequiredVariables() []string {
-	return []string{"temperature", "humidity", "pm2p5", "pm10"}
+	return []string{"pm2p5", "pm10"}
 }
 
 func (s *ScorerStub) Calculate(variableData []VariableData) (Score, error) {
