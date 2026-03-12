@@ -62,7 +62,7 @@ func (c *Client) GetEnvironmentalData(
 	}
 	u := c.baseURL + "/v1/environmental?" + queryParams.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct environmental req: %w", err)
 	}
