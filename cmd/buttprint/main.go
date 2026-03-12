@@ -31,8 +31,7 @@ func newApp() (*app, error) {
 	cfg := config.Load()
 
 	httpClient := &http.Client{Timeout: 10 * time.Second}
-	var envClient domain.EnvironmentalDataProvider
-	envClient = jackfruit.NewClient(httpClient, cfg.JackfruitURL, logger.With("component", "jackfruit"))
+	envClient := jackfruit.NewClient(httpClient, cfg.JackfruitURL)
 
 	service := domain.NewService(
 		envClient,

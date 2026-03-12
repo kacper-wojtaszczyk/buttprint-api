@@ -1,35 +1,5 @@
 package domain
 
-import (
-	"context"
-	"time"
-)
-
-type EnvironmentalDataProviderStub struct{}
-
-func (e *EnvironmentalDataProviderStub) GetEnvironmentalData(ctx context.Context, lat, lon float64, timestamp time.Time, variables []string) ([]VariableData, error) {
-	return []VariableData{
-		{
-			Name:         "pm2p5",
-			Value:        10,
-			Unit:         "µg/m³",
-			RefTimestamp: timestamp,
-			ActualLat:    lat,
-			ActualLon:    lon,
-			Lineage:      nil,
-		},
-		{
-			Name:         "pm10",
-			Value:        10,
-			Unit:         "µg/m³",
-			RefTimestamp: timestamp,
-			ActualLat:    lat,
-			ActualLon:    lon,
-			Lineage:      nil,
-		},
-	}, nil
-}
-
 type ScorerStub struct{}
 
 func (s *ScorerStub) RequiredVariables() []string {

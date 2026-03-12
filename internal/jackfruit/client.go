@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -20,7 +19,6 @@ import (
 type Client struct {
 	httpClient *http.Client
 	baseURL    string
-	logger     *slog.Logger
 }
 type environmentalResponse struct {
 	Variables []variableResponse `json:"variables"`
@@ -32,7 +30,7 @@ type variableResponse struct {
 	RefTimestamp time.Time        `json:"ref_timestamp"`
 	ActualLat    float64          `json:"actual_lat"`
 	ActualLon    float64          `json:"actual_lon"`
-	Lineage      *lineageResponse `json:"lineage,omitempty"`
+	Lineage      *lineageResponse `json:"lineage"`
 }
 
 type lineageResponse struct {
@@ -43,11 +41,10 @@ type lineageResponse struct {
 
 var errNotFound = errors.New("environmental data not found")
 
-func NewClient(httpClient *http.Client, baseURL string, logger *slog.Logger) *Client {
+func NewClient(httpClient *http.Client, baseURL string) *Client {
 	return &Client{
 		httpClient: httpClient,
 		baseURL:    baseURL,
-		logger:     logger,
 	}
 }
 
@@ -72,14 +69,11 @@ func (c *Client) GetEnvironmentalData(
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute environmental req: %w", err)
-	}
-	defer func(body io.ReadCloser) {
-		err := body.Close()
-		if err != nil {
-			c.logger.Error("failed to close response body", "error", err)
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("jackfruit request failed: %w", ctx.Err())
 		}
-	}(resp.Body)
+		return nil, domain.ErrUpstream{Service: "jackfruit", Cause: fmt.Errorf("request failed: %w", err)}
+	}
 
 	envResp, err := decodeResponse(resp)
 	if err != nil {
@@ -94,6 +88,7 @@ func (c *Client) GetEnvironmentalData(
 }
 
 func decodeResponse(resp *http.Response) (*environmentalResponse, error) {
+	defer resp.Body.Close()
 	switch resp.StatusCode {
 	case http.StatusOK:
 		var parsed environmentalResponse
@@ -113,22 +108,22 @@ func decodeResponse(resp *http.Response) (*environmentalResponse, error) {
 
 func toDomainVariables(variables []variableResponse) []domain.VariableData {
 	result := make([]domain.VariableData, len(variables))
-	for i, variable := range variables {
+	for i, v := range variables {
 		var lineage *domain.Lineage
-		if variable.Lineage != nil {
+		if v.Lineage != nil {
 			lineage = &domain.Lineage{
-				Source:    variable.Lineage.Source,
-				Dataset:   variable.Lineage.Dataset,
-				RawFileID: variable.Lineage.RawFileID,
+				Source:    v.Lineage.Source,
+				Dataset:   v.Lineage.Dataset,
+				RawFileID: v.Lineage.RawFileID,
 			}
 		}
 		result[i] = domain.VariableData{
-			Name:         variable.Name,
-			Value:        variable.Value,
-			Unit:         variable.Unit,
-			RefTimestamp: variable.RefTimestamp,
-			ActualLat:    variable.ActualLat,
-			ActualLon:    variable.ActualLon,
+			Name:         v.Name,
+			Value:        v.Value,
+			Unit:         v.Unit,
+			RefTimestamp: v.RefTimestamp,
+			ActualLat:    v.ActualLat,
+			ActualLon:    v.ActualLon,
 			Lineage:      lineage,
 		}
 	}
