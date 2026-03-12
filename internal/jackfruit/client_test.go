@@ -245,13 +245,13 @@ func TestGetEnvironmentalData(t *testing.T) {
 		{
 			name: "request timeout",
 			handler: func(w http.ResponseWriter, r *http.Request) {
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(500 * time.Millisecond)
 				w.WriteHeader(http.StatusOK)
 				_, _ = w.Write([]byte(`{"variables":[]}`))
 			},
 			ctx: func(t *testing.T) context.Context {
-				// 5 ms deadline — well inside the handler's 100 ms sleep.
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+				// 100 ms deadline — well inside the handler's 500 ms sleep.
+				ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 				t.Cleanup(cancel)
 				return ctx
 			},
