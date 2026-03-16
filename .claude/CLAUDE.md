@@ -82,7 +82,7 @@ Missing variables get neutral score (0.5) so the butt renders with whatever data
 
 - **Interfaces for swappability:** `Resolver` for IP geoloc (MVP: MaxMind GeoLite2), `Renderer` for SVG (MVP: parametric SVG, future: ASCII, diffusion). Design against the interface, not the implementation.
 - **Lineage pass-through:** Don't flatten Jackfruit's per-variable response. Each variable carries its own `ref_timestamp`, `actual_lat/lon`, and `lineage` because variables may come from different datasets or grids.
-- **Temperature unit conversion:** Jackfruit returns temperature in Kelvin. Convert K → °C before scoring and before including in FE response.
+- **Temperature unit conversion:** Jackfruit stores and returns temperature in °C. No conversion needed in Buttprint API — unit conversion happens at ingestion time in the pipeline.
 - **Rate limiting:** In-memory per-IP (MVP). `golang.org/x/time/rate` token bucket. Behind an interface for future Redis upgrade.
 
 ## Go Conventions

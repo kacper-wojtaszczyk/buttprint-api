@@ -47,7 +47,7 @@ func TestGetEnvironmentalData(t *testing.T) {
 		Variables: []variableResponse{
 			{Name: "pm2p5", Value: 12.5, Unit: "µg/m³", RefTimestamp: refTime, ActualLat: 52.5, ActualLon: 13.4},
 			{Name: "pm10", Value: 20.0, Unit: "µg/m³", RefTimestamp: refTime, ActualLat: 52.5, ActualLon: 13.4},
-			{Name: "temperature", Value: 295.15, Unit: "K", RefTimestamp: refTime, ActualLat: 52.5, ActualLon: 13.4},
+			{Name: "temperature", Value: 22.0, Unit: "°C", RefTimestamp: refTime, ActualLat: 52.5, ActualLon: 13.4},
 			{Name: "humidity", Value: 75.0, Unit: "%", RefTimestamp: refTime, ActualLat: 52.5, ActualLon: 13.4},
 		},
 	})

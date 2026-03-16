@@ -3,7 +3,7 @@ package domain
 type ScorerStub struct{}
 
 func (s *ScorerStub) RequiredVariables() []string {
-	return []string{"pm2p5", "pm10"}
+	return []string{"temperature", "humidity", "pm2p5", "pm10"}
 }
 
 func (s *ScorerStub) Calculate(variableData []VariableData) (Score, error) {
