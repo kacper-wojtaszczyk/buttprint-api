@@ -62,7 +62,7 @@ func (r *SVGRenderer) Render(score domain.Score) (string, error) {
 
 	b.WriteString(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 260">`)
 
-	writeGradientDefs(&b, score)
+	writeGradientDefs(&b, score.Warmth, score.Irritation, score.Sweatiness)
 	writeBodyShape(&b, geom, score.Warmth)
 	writeCrease(&b, geom, score.Warmth)
 	writeBlush(&b, geom, score.Irritation)
@@ -74,8 +74,8 @@ func (r *SVGRenderer) Render(score domain.Score) (string, error) {
 	return b.String(), nil
 }
 
-func writeGradientDefs(b *strings.Builder, score domain.Score) {
-	base := warmthColor(score.Warmth)
+func writeGradientDefs(b *strings.Builder, warmth, irritation, sweatiness float64) {
+	base := warmthColor(warmth)
 	center := base.withLightness(0.10)
 	edge := base.withLightness(-0.05)
 
@@ -87,36 +87,22 @@ func writeGradientDefs(b *strings.Builder, score domain.Score) {
 		`</radialGradient>`,
 		center.toHex(), edge.toHex())
 
-	if score.Irritation >= 0.05 {
-		blushColor := blushHex(score.Irritation)
-		opacity := ff(lerp(0.02, 0.55, score.Irritation))
+	if irritation >= 0.05 {
+		blushColor := blushHex(irritation)
+		opacity := ff(lerp(0.02, 0.55, irritation))
 
 		writeFadingGradient(b, "blushL", blushColor, opacity)
 		writeFadingGradient(b, "blushR", blushColor, opacity)
 	}
 
-	if score.Sweatiness >= 0.05 {
-		opacity := ff(lerp(0.02, 0.50, score.Sweatiness))
+	if sweatiness >= 0.05 {
+		opacity := ff(lerp(0.02, 0.50, sweatiness))
 
 		writeFadingGradient(b, "highL", "#FFFFFF", opacity)
 		writeFadingGradient(b, "highR", "#FFFFFF", opacity)
 	}
 
 	b.WriteString(`</defs>`)
-}
-
-func strokeColor(warmth float64) string {
-	return warmthColor(warmth).withLightness(-0.15).withSaturation(0.10).toHex()
-}
-
-// blushHex interpolates from soft pink (#E08080) to angry red (#C02020).
-func blushHex(irritation float64) string {
-	c := hslColor{
-		H: 0,
-		S: lerp(0.55, 0.71, irritation),
-		L: lerp(0.69, 0.44, irritation),
-	}
-	return c.toHex()
 }
 
 func writeFadingGradient(b *strings.Builder, id, color, opacity string) {

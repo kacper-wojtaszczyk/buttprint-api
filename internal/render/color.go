@@ -109,6 +109,20 @@ func warmthColor(warmth float64) hslColor {
 	return warmthRamp[0].color
 }
 
+func strokeColor(warmth float64) string {
+	return warmthColor(warmth).withLightness(-0.15).withSaturation(0.10).toHex()
+}
+
+// blushHex interpolates from soft pink (#E08080) to angry red (#C02020).
+func blushHex(irritation float64) string {
+	c := hslColor{
+		H: 0,
+		S: lerp(0.55, 0.71, irritation),
+		L: lerp(0.69, 0.44, irritation),
+	}
+	return c.toHex()
+}
+
 func clamp01(v float64) float64 {
 	if v < 0 {
 		return 0

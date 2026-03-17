@@ -101,7 +101,8 @@ func TestRender_StructuralAssertions(t *testing.T) {
 	assertContains(t, svg, `<svg`)
 	assertContains(t, svg, `xmlns="http://www.w3.org/2000/svg"`)
 	assertContains(t, svg, `viewBox="0 0 240 260"`)
-	assertContains(t, svg, `<path`) // body
+	assertContains(t, svg, `<path`)                  // body
+	assertContains(t, svg, `stroke-linecap="round"`) // crease
 	assertContains(t, svg, `</svg>`)
 
 	// No width/height on the SVG element (stroke-width is fine).
