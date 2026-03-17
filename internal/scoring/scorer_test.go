@@ -1,11 +1,34 @@
 package scoring
 
 import (
+	"math"
 	"strings"
 	"testing"
 
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/domain"
 )
+
+const epsilon = 1e-9
+
+func closeTo(a, b float64) bool {
+	return math.Abs(a-b) < epsilon
+}
+
+func assertScore(t *testing.T, got, want domain.Score) {
+	t.Helper()
+	if !closeTo(got.Thickness, want.Thickness) {
+		t.Errorf("Thickness: want %v, got %v", want.Thickness, got.Thickness)
+	}
+	if !closeTo(got.Sweatiness, want.Sweatiness) {
+		t.Errorf("Sweatiness: want %v, got %v", want.Sweatiness, got.Sweatiness)
+	}
+	if !closeTo(got.Irritation, want.Irritation) {
+		t.Errorf("Irritation: want %v, got %v", want.Irritation, got.Irritation)
+	}
+	if !closeTo(got.Warmth, want.Warmth) {
+		t.Errorf("Warmth: want %v, got %v", want.Warmth, got.Warmth)
+	}
+}
 
 func allVars(temp, hum, dew, pm25, pm10 float64) []domain.VariableData {
 	return []domain.VariableData{
@@ -29,18 +52,7 @@ func TestCalculate_MidRange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if score.Thickness != 0.5 {
-		t.Errorf("Thickness: expected 0.5, got %v", score.Thickness)
-	}
-	if score.Sweatiness != 0.5 {
-		t.Errorf("Sweatiness: expected 0.5, got %v", score.Sweatiness)
-	}
-	if score.Irritation != 0.5 {
-		t.Errorf("Irritation: expected 0.5, got %v", score.Irritation)
-	}
-	if score.Warmth != 0.5 {
-		t.Errorf("Warmth: expected 0.5, got %v", score.Warmth)
-	}
+	assertScore(t, score, domain.Score{Thickness: 0.5, Sweatiness: 0.5, Irritation: 0.5, Warmth: 0.5})
 }
 
 func TestCalculate_AllMinimum(t *testing.T) {
@@ -49,18 +61,7 @@ func TestCalculate_AllMinimum(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if score.Thickness != 0.0 {
-		t.Errorf("Thickness: expected 0.0, got %v", score.Thickness)
-	}
-	if score.Sweatiness != 0.0 {
-		t.Errorf("Sweatiness: expected 0.0, got %v", score.Sweatiness)
-	}
-	if score.Irritation != 0.0 {
-		t.Errorf("Irritation: expected 0.0, got %v", score.Irritation)
-	}
-	if score.Warmth != 0.0 {
-		t.Errorf("Warmth: expected 0.0, got %v", score.Warmth)
-	}
+	assertScore(t, score, domain.Score{})
 }
 
 func TestCalculate_AllMaximum(t *testing.T) {
@@ -69,18 +70,7 @@ func TestCalculate_AllMaximum(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if score.Thickness != 1.0 {
-		t.Errorf("Thickness: expected 1.0, got %v", score.Thickness)
-	}
-	if score.Sweatiness != 1.0 {
-		t.Errorf("Sweatiness: expected 1.0, got %v", score.Sweatiness)
-	}
-	if score.Irritation != 1.0 {
-		t.Errorf("Irritation: expected 1.0, got %v", score.Irritation)
-	}
-	if score.Warmth != 1.0 {
-		t.Errorf("Warmth: expected 1.0, got %v", score.Warmth)
-	}
+	assertScore(t, score, domain.Score{Thickness: 1.0, Sweatiness: 1.0, Irritation: 1.0, Warmth: 1.0})
 }
 
 // TestCalculate_Weights verifies that each weight contributes correctly by
@@ -88,52 +78,34 @@ func TestCalculate_AllMaximum(t *testing.T) {
 // Only the maxed variable's weight should appear in the relevant score.
 func TestCalculate_Weights(t *testing.T) {
 	tests := []struct {
-		name       string
-		vars       []domain.VariableData
-		thickness  float64
-		sweatiness float64
-		irritation float64
-		warmth     float64
+		name string
+		vars []domain.VariableData
+		want domain.Score
 	}{
 		{
-			name:       "only temperature at max",
-			vars:       allVars(48, 10, -20, 0, 0),
-			thickness:  0.30, // tempWeight
-			sweatiness: 0.0,
-			irritation: 0.0,
-			warmth:     1.0,
+			name: "only temperature at max",
+			vars: allVars(48, 10, -20, 0, 0),
+			want: domain.Score{Thickness: 0.30, Warmth: 1.0},
 		},
 		{
-			name:       "only humidity at max",
-			vars:       allVars(-30, 98, -20, 0, 0),
-			thickness:  0.30, // humWeight
-			sweatiness: 0.0,
-			irritation: 0.0,
-			warmth:     0.0,
+			name: "only humidity at max",
+			vars: allVars(-30, 98, -20, 0, 0),
+			want: domain.Score{Thickness: 0.30},
 		},
 		{
-			name:       "only pm2p5 at max",
-			vars:       allVars(-30, 10, -20, 300, 0),
-			thickness:  0.25, // pm25Weight
-			sweatiness: 0.0,
-			irritation: 0.65, // pm25IrritationWeight
-			warmth:     0.0,
+			name: "only pm2p5 at max",
+			vars: allVars(-30, 10, -20, 300, 0),
+			want: domain.Score{Thickness: 0.25, Irritation: 0.65},
 		},
 		{
-			name:       "only pm10 at max",
-			vars:       allVars(-30, 10, -20, 0, 500),
-			thickness:  0.15, // pm10Weight
-			sweatiness: 0.0,
-			irritation: 0.35, // pm10IrritationWeight
-			warmth:     0.0,
+			name: "only pm10 at max",
+			vars: allVars(-30, 10, -20, 0, 500),
+			want: domain.Score{Thickness: 0.15, Irritation: 0.35},
 		},
 		{
-			name:       "only dewpoint at max",
-			vars:       allVars(-30, 10, 32, 0, 0),
-			thickness:  0.0,
-			sweatiness: 1.0,
-			irritation: 0.0,
-			warmth:     0.0,
+			name: "only dewpoint at max",
+			vars: allVars(-30, 10, 32, 0, 0),
+			want: domain.Score{Sweatiness: 1.0},
 		},
 	}
 
@@ -144,18 +116,7 @@ func TestCalculate_Weights(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if score.Thickness != tt.thickness {
-				t.Errorf("Thickness: expected %v, got %v", tt.thickness, score.Thickness)
-			}
-			if score.Sweatiness != tt.sweatiness {
-				t.Errorf("Sweatiness: expected %v, got %v", tt.sweatiness, score.Sweatiness)
-			}
-			if score.Irritation != tt.irritation {
-				t.Errorf("Irritation: expected %v, got %v", tt.irritation, score.Irritation)
-			}
-			if score.Warmth != tt.warmth {
-				t.Errorf("Warmth: expected %v, got %v", tt.warmth, score.Warmth)
-			}
+			assertScore(t, score, tt.want)
 		})
 	}
 }
@@ -166,18 +127,7 @@ func TestCalculate_ClampLow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if score.Thickness != 0.0 {
-		t.Errorf("Thickness: expected 0.0, got %v", score.Thickness)
-	}
-	if score.Sweatiness != 0.0 {
-		t.Errorf("Sweatiness: expected 0.0, got %v", score.Sweatiness)
-	}
-	if score.Irritation != 0.0 {
-		t.Errorf("Irritation: expected 0.0, got %v", score.Irritation)
-	}
-	if score.Warmth != 0.0 {
-		t.Errorf("Warmth: expected 0.0, got %v", score.Warmth)
-	}
+	assertScore(t, score, domain.Score{})
 }
 
 func TestCalculate_ClampHigh(t *testing.T) {
@@ -186,18 +136,7 @@ func TestCalculate_ClampHigh(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if score.Thickness != 1.0 {
-		t.Errorf("Thickness: expected 1.0, got %v", score.Thickness)
-	}
-	if score.Sweatiness != 1.0 {
-		t.Errorf("Sweatiness: expected 1.0, got %v", score.Sweatiness)
-	}
-	if score.Irritation != 1.0 {
-		t.Errorf("Irritation: expected 1.0, got %v", score.Irritation)
-	}
-	if score.Warmth != 1.0 {
-		t.Errorf("Warmth: expected 1.0, got %v", score.Warmth)
-	}
+	assertScore(t, score, domain.Score{Thickness: 1.0, Sweatiness: 1.0, Irritation: 1.0, Warmth: 1.0})
 }
 
 func TestCalculate_EmptyInput(t *testing.T) {
@@ -287,4 +226,36 @@ func TestCalculate_MissingVariables(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCalculate_DuplicateVariable(t *testing.T) {
+	s := NewScorer()
+	vars := []domain.VariableData{
+		{Name: "temperature", Value: 20},
+		{Name: "temperature", Value: 30},
+		{Name: "humidity", Value: 50},
+		{Name: "dewpoint", Value: 10},
+		{Name: "pm2p5", Value: 100},
+		{Name: "pm10", Value: 200},
+	}
+	_, err := s.Calculate(vars)
+	if err == nil {
+		t.Fatal("expected error for duplicate variable, got nil")
+	}
+	if !strings.Contains(err.Error(), "duplicate variable") {
+		t.Errorf("expected 'duplicate variable' in error, got %q", err.Error())
+	}
+	if !strings.Contains(err.Error(), "temperature") {
+		t.Errorf("expected error to name the duplicate variable, got %q", err.Error())
+	}
+}
+
+func TestCalculate_ExtraVariablesIgnored(t *testing.T) {
+	s := NewScorer()
+	vars := append(allVars(9, 54, 6, 150, 250), domain.VariableData{Name: "wind_speed", Value: 42})
+	score, err := s.Calculate(vars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertScore(t, score, domain.Score{Thickness: 0.5, Sweatiness: 0.5, Irritation: 0.5, Warmth: 0.5})
 }

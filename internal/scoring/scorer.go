@@ -2,6 +2,7 @@ package scoring
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/domain"
@@ -45,7 +46,7 @@ func NewScorer() *Scorer {
 }
 
 func (s *Scorer) RequiredVariables() []string {
-	return requiredVariables
+	return slices.Clone(requiredVariables)
 }
 
 func (s *Scorer) Calculate(variableData []domain.VariableData) (domain.Score, error) {
@@ -71,6 +72,9 @@ func (s *Scorer) Calculate(variableData []domain.VariableData) (domain.Score, er
 func buildVarMap(variableData []domain.VariableData) (map[string]float64, error) {
 	vars := make(map[string]float64, len(variableData))
 	for _, v := range variableData {
+		if _, exists := vars[v.Name]; exists {
+			return nil, fmt.Errorf("scorer: duplicate variable %q — this is a bug", v.Name)
+		}
 		vars[v.Name] = v.Value
 	}
 
@@ -91,12 +95,5 @@ func buildVarMap(variableData []domain.VariableData) (map[string]float64, error)
 }
 
 func normalize(value, lo, hi float64) float64 {
-	n := (value - lo) / (hi - lo)
-	if n < 0 {
-		return 0
-	}
-	if n > 1 {
-		return 1
-	}
-	return n
+	return min(max((value-lo)/(hi-lo), 0), 1)
 }
