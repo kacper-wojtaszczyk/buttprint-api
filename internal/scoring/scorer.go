@@ -23,7 +23,7 @@ const (
 	pm10Max = 500.0
 )
 
-// Thickness weights (must sum to 1.0).
+// Thiccness weights (must sum to 1.0).
 const (
 	tempWeight = 0.30
 	humWeight  = 0.30
@@ -62,7 +62,7 @@ func (s *Scorer) Calculate(variableData []domain.VariableData) (domain.Score, er
 	normPM10 := normalize(vars["pm10"], pm10Min, pm10Max)
 
 	return domain.Score{
-		Thickness:  tempWeight*normTemp + humWeight*normHum + pm25Weight*normPM25 + pm10Weight*normPM10,
+		Thiccness:  tempWeight*normTemp + humWeight*normHum + pm25Weight*normPM25 + pm10Weight*normPM10,
 		Sweatiness: normDew,
 		Irritation: pm25IrritationWeight*normPM25 + pm10IrritationWeight*normPM10,
 		Warmth:     normTemp,

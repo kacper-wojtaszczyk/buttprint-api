@@ -3,7 +3,6 @@ package render
 import (
 	"fmt"
 	"math"
-	"strconv"
 )
 
 type hslColor struct {
@@ -18,11 +17,13 @@ type colorStop struct {
 }
 
 var warmthRamp = []colorStop{
-	{0.0, hslColor{215, 0.50, 0.62}},
-	{0.3, hslColor{270, 0.35, 0.65}},
-	{0.5, hslColor{25, 0.70, 0.78}},
-	{0.7, hslColor{15, 0.72, 0.60}},
-	{1.0, hslColor{8, 0.80, 0.55}},
+	{0.0, hslColor{215, 0.35, 0.72}},
+	{0.12, hslColor{215, 0.12, 0.77}},
+	{0.18, hslColor{25, 0.04, 0.79}},
+	{0.4, hslColor{25, 0.25, 0.78}},
+	{0.5, hslColor{25, 0.50, 0.76}},
+	{0.7, hslColor{15, 0.55, 0.65}},
+	{1.0, hslColor{8, 0.62, 0.60}},
 }
 
 // toHex converts an HSL color to a "#RRGGBB" string.
@@ -65,11 +66,6 @@ func (c hslColor) withSaturation(delta float64) hslColor {
 	return hslColor{H: c.H, S: clamp01(c.S + delta), L: c.L}
 }
 
-// lerp returns a + t*(b-a).
-func lerp(a, b, t float64) float64 {
-	return a + t*(b-a)
-}
-
 // lerpHue interpolates between two hue values using the shortest arc on the color wheel.
 func lerpHue(h1, h2, t float64) float64 {
 	delta := h2 - h1
@@ -106,11 +102,6 @@ func warmthColor(warmth float64) hslColor {
 	}
 
 	return warmthRamp[0].color
-}
-
-// ff formats a float64 to 1 decimal place for SVG output.
-func ff(v float64) string {
-	return strconv.FormatFloat(v, 'f', 1, 64)
 }
 
 func clamp01(v float64) float64 {

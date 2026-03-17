@@ -30,7 +30,7 @@ type Lineage struct {
 }
 
 type Score struct {
-	Thickness  float64
+	Thiccness  float64
 	Sweatiness float64
 	Irritation float64
 	Warmth     float64

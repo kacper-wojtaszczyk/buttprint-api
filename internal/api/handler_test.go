@@ -35,7 +35,7 @@ func stubButtprint() domain.Buttprint {
 			{Name: "temperature", Value: 25, Unit: "°C"},
 		},
 		Score: domain.Score{
-			Thickness:  0.5,
+			Thiccness:  0.5,
 			Sweatiness: 0.6,
 			Irritation: 0.3,
 			Warmth:     0.4,
@@ -186,8 +186,8 @@ func TestHandleButtprint_ResponseShape(t *testing.T) {
 	if !resp.RequestedTimestamp.Equal(expectedTimestamp) {
 		t.Errorf("expected requested_timestamp %v, got %v", expectedTimestamp, resp.RequestedTimestamp)
 	}
-	if resp.Score.Thickness != 0.5 {
-		t.Errorf("expected thickness 0.5, got %f", resp.Score.Thickness)
+	if resp.Score.Thiccness != 0.5 {
+		t.Errorf("expected thiccness 0.5, got %f", resp.Score.Thiccness)
 	}
 	if resp.Score.Warmth != 0.4 {
 		t.Errorf("expected warmth 0.4, got %v", resp.Score.Warmth)

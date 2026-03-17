@@ -3,10 +3,21 @@ package render
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/domain"
 )
+
+// lerp returns a + t*(b-a).
+func lerp(a, b, t float64) float64 {
+	return a + t*(b-a)
+}
+
+// ff formats a float64 to 1 decimal place for SVG output.
+func ff(v float64) string {
+	return strconv.FormatFloat(v, 'f', 1, 64)
+}
 
 // SVGRenderer generates parametric SVG butt visualizations driven by scores.
 type SVGRenderer struct{}
@@ -16,20 +27,24 @@ func NewSVGRenderer() *SVGRenderer {
 }
 
 type bodyGeom struct {
-	thickness                       float64
-	topY, sideX, sideY, bottomY    float64
+	thiccness                       float64
+	topY, sideX, sideY, bottomY     float64
 	cheekY, leftCheekX, rightCheekX float64
 }
 
 func newBodyGeom(t float64) bodyGeom {
-	sideX := lerp(75, 30, t)
+	sideX := lerp(60, 10, t)
+	topY := lerp(55, 40, t)
+	bottomY := lerp(205, 220, t)
+	height := bottomY - topY
+	sideY := topY + height*lerp(0.4, 0.30, t)
 	return bodyGeom{
-		thickness:   t,
-		topY:        lerp(85, 50, t),
+		thiccness:   t,
+		topY:        topY,
 		sideX:       sideX,
-		sideY:       lerp(130, 125, t),
-		bottomY:     lerp(175, 215, t),
-		cheekY:      lerp(135, 145, t),
+		sideY:       sideY,
+		bottomY:     bottomY,
+		cheekY:      sideY + height*0.08,
 		leftCheekX:  (120 + sideX) / 2,
 		rightCheekX: (120 + (240 - sideX)) / 2,
 	}
@@ -38,7 +53,7 @@ func newBodyGeom(t float64) bodyGeom {
 // Render is deterministic: same input always produces identical output.
 func (r *SVGRenderer) Render(score domain.Score) (string, error) {
 	var b strings.Builder
-	geom := newBodyGeom(score.Thickness)
+	geom := newBodyGeom(score.Thiccness)
 
 	b.WriteString(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 260">`)
 
@@ -113,7 +128,7 @@ func writeEllipse(b *strings.Builder, cx, cy float64, rx, ry, fill string) {
 
 // writeBodyShape draws 4 cubic Bézier segments forming a peach shape, symmetric around x=120.
 func writeBodyShape(b *strings.Builder, geom bodyGeom, warmth float64) {
-	t := geom.thickness
+	t := geom.thiccness
 	path := fmt.Sprintf(
 		`M %s %s `+
 			`C %s %s, %s %s, %s %s `+
@@ -121,51 +136,51 @@ func writeBodyShape(b *strings.Builder, geom bodyGeom, warmth float64) {
 			`C %s %s, %s %s, %s %s `+
 			`C %s %s, %s %s, %s %s Z`,
 
-		// Start: top center
+		// Start: top center (dip between cheeks)
 		ff(120), ff(geom.topY),
 
-		// Seg 1: top → left side
-		ff(lerp(95, 75, t)), ff(geom.topY),
-		ff(geom.sideX), ff(lerp(90, 75, t)),
+		// Seg 1: top → left side (flat at t=0, rising cheeks at t=1)
+		ff(lerp(75, 55, t)), ff(geom.topY-lerp(0, 25, t)),
+		ff(geom.sideX), ff(geom.topY+(geom.sideY-geom.topY)*0.35),
 		ff(geom.sideX), ff(geom.sideY),
 
-		// Seg 2: left side → bottom center
-		ff(geom.sideX), ff(lerp(165, 185, t)),
-		ff(lerp(95, 80, t)), ff(lerp(185, 210, t)),
+		// Seg 2: left side → bottom center (stays wide, rounds in late)
+		ff(geom.sideX-lerp(0, 12, t)), ff(geom.sideY+(geom.bottomY-geom.sideY)*0.35),
+		ff(lerp(80, 55, t)), ff(geom.bottomY-lerp(5, 0, t)),
 		ff(120), ff(geom.bottomY),
 
 		// Seg 3: bottom center → right side (mirror)
-		ff(240-lerp(95, 80, t)), ff(lerp(185, 210, t)),
-		ff(240-geom.sideX), ff(lerp(165, 185, t)),
+		ff(240-lerp(80, 55, t)), ff(geom.bottomY-lerp(5, 0, t)),
+		ff(240-geom.sideX+lerp(0, 12, t)), ff(geom.sideY+(geom.bottomY-geom.sideY)*0.35),
 		ff(240-geom.sideX), ff(geom.sideY),
 
 		// Seg 4: right side → top (mirror)
-		ff(240-geom.sideX), ff(lerp(90, 75, t)),
-		ff(240-lerp(95, 75, t)), ff(geom.topY),
+		ff(240-geom.sideX), ff(geom.topY+(geom.sideY-geom.topY)*0.35),
+		ff(240-lerp(75, 55, t)), ff(geom.topY-lerp(0, 25, t)),
 		ff(120), ff(geom.topY),
 	)
 
-	strokeWidth := ff(lerp(2.0, 3.5, t))
+	strokeWidth := ff(lerp(2.5, 3.5, t))
 
 	fmt.Fprintf(b, `<path d="%s" fill="url(#bodyGrad)" stroke="%s" stroke-width="%s" stroke-linejoin="round"/>`,
 		path, strokeColor(warmth), strokeWidth)
 }
 
 func writeCrease(b *strings.Builder, geom bodyGeom, warmth float64) {
-	t := geom.thickness
+	t := geom.thiccness
 
-	creaseTop := geom.topY + lerp(15, 20, t)
-	creaseBottom := geom.bottomY - lerp(5, 10, t)
+	creaseTop := geom.topY + 10
+	creaseBottom := geom.bottomY - 15
 
-	// Both control points shift left for a gentle arc.
-	bow := lerp(1, 8, t)
+	// Upper CP bows more (follows cheek separation), lower CP eases to nearly straight.
+	bow := lerp(5, 45, t)
 
 	strokeWidth := ff(lerp(2.0, 4.0, t))
 
 	fmt.Fprintf(b, `<path d="M %s %s C %s %s, %s %s, %s %s" fill="none" stroke="%s" stroke-width="%s" stroke-linecap="round"/>`,
 		ff(120), ff(creaseTop),
-		ff(120-bow), ff(creaseTop+(creaseBottom-creaseTop)*0.33),
-		ff(120-bow), ff(creaseTop+(creaseBottom-creaseTop)*0.66),
+		ff(120-bow), ff(creaseTop+(creaseBottom-creaseTop)*0.30),
+		ff(120-bow*0.15), ff(creaseTop+(creaseBottom-creaseTop)*0.90),
 		ff(120), ff(creaseBottom),
 		strokeColor(warmth), strokeWidth)
 }
@@ -206,7 +221,7 @@ func writeDroplets(b *strings.Builder, geom bodyGeom, sweatiness float64) {
 	halfWidth := (120 - geom.sideX) * 0.9
 	centerY := geom.sideY + (geom.bottomY-geom.sideY)*0.65 // gravity bias
 	halfHeight := (geom.bottomY - geom.sideY) / 2 * 0.75
-	scale := lerp(0.7, 1.4, geom.thickness)
+	scale := lerp(0.7, 1.4, geom.thiccness)
 
 	goldenAngle := math.Pi * (3 - math.Sqrt(5)) // ≈137.5°
 	uLift := (geom.bottomY - geom.sideY) * 0.55

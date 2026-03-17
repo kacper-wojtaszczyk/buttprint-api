@@ -42,9 +42,9 @@ func assertNotContains(t *testing.T, svg, substr string) {
 }
 
 // score is a shorthand constructor to keep test literals concise.
-func score(thickness, sweatiness, irritation, warmth float64) domain.Score {
+func score(thiccness, sweatiness, irritation, warmth float64) domain.Score {
 	return domain.Score{
-		Thickness:  thickness,
+		Thiccness:  thiccness,
 		Sweatiness: sweatiness,
 		Irritation: irritation,
 		Warmth:     warmth,
@@ -186,14 +186,14 @@ func TestRender_MaxDropletsAtHighSweatiness(t *testing.T) {
 }
 
 func TestRender_MixedExtremes(t *testing.T) {
-	// High thickness + irritation, low sweatiness + warmth.
+	// High thiccness + irritation, low sweatiness + warmth.
 	svg1 := mustRender(t, score(1, 0, 1, 0))
 	assertValidXML(t, svg1)
 	assertContains(t, svg1, `url(#blushL)`)   // irritation=1
 	assertNotContains(t, svg1, `#D0E8FF`)     // sweatiness=0
 	assertNotContains(t, svg1, `url(#highL)`) // sweatiness=0
 
-	// Low thickness + irritation, high sweatiness + warmth.
+	// Low thiccness + irritation, high sweatiness + warmth.
 	svg2 := mustRender(t, score(0, 1, 0, 1))
 	assertValidXML(t, svg2)
 	assertNotContains(t, svg2, `url(#blushL)`) // irritation=0

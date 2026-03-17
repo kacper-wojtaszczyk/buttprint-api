@@ -119,15 +119,15 @@ func TestWarmthColor_RampStops(t *testing.T) {
 }
 
 func TestWarmthColor_Interpolation(t *testing.T) {
-	// Midpoint between stop 0 (t=0.0) and stop 1 (t=0.3) is t=0.15.
-	c := warmthColor(0.15)
-	// S should be between 0.50 and 0.35.
-	if c.S < 0.35 || c.S > 0.50 {
-		t.Errorf("S at t=0.15 = %f, want between 0.35 and 0.50", c.S)
+	// Midpoint between stop 0 (t=0.0) and stop 1 (t=0.12) is t=0.06.
+	c := warmthColor(0.06)
+	// S should be between 0.35 and 0.12.
+	if c.S < 0.12 || c.S > 0.35 {
+		t.Errorf("S at t=0.06 = %f, want between 0.12 and 0.35", c.S)
 	}
-	// L should be between 0.62 and 0.65.
-	if c.L < 0.62 || c.L > 0.65 {
-		t.Errorf("L at t=0.15 = %f, want between 0.62 and 0.65", c.L)
+	// L should be between 0.72 and 0.77.
+	if c.L < 0.72 || c.L > 0.77 {
+		t.Errorf("L at t=0.06 = %f, want between 0.72 and 0.77", c.L)
 	}
 }
 
