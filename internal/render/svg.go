@@ -52,6 +52,11 @@ func newBodyGeom(t float64) bodyGeom {
 
 // Render is deterministic: same input always produces identical output.
 func (r *SVGRenderer) Render(score domain.Score) (string, error) {
+	score.Thiccness = clamp01(score.Thiccness)
+	score.Sweatiness = clamp01(score.Sweatiness)
+	score.Irritation = clamp01(score.Irritation)
+	score.Warmth = clamp01(score.Warmth)
+
 	var b strings.Builder
 	geom := newBodyGeom(score.Thiccness)
 
@@ -121,12 +126,12 @@ func writeFadingGradient(b *strings.Builder, id, color, opacity string) {
 		`</radialGradient>`, id, color, opacity, color)
 }
 
-func writeEllipse(b *strings.Builder, cx, cy float64, rx, ry, fill string) {
+func writeEllipse(b *strings.Builder, cx, cy, rx, ry float64, fill string) {
 	fmt.Fprintf(b, `<ellipse cx="%s" cy="%s" rx="%s" ry="%s" fill="%s"/>`,
-		ff(cx), ff(cy), rx, ry, fill)
+		ff(cx), ff(cy), ff(rx), ff(ry), fill)
 }
 
-// writeBodyShape draws 4 cubic Bézier segments forming a peach shape, symmetric around x=120.
+// writeBodyShape draws 4 cubic Bézier segments forming a butt shape, symmetric around x=120.
 func writeBodyShape(b *strings.Builder, geom bodyGeom, warmth float64) {
 	t := geom.thiccness
 	path := fmt.Sprintf(
@@ -190,8 +195,8 @@ func writeBlush(b *strings.Builder, geom bodyGeom, irritation float64) {
 		return
 	}
 
-	rx := ff(lerp(18, 35, irritation))
-	ry := ff(lerp(14, 28, irritation))
+	rx := lerp(18, 35, irritation)
+	ry := lerp(14, 28, irritation)
 
 	writeEllipse(b, geom.leftCheekX, geom.cheekY, rx, ry, "url(#blushL)")
 	writeEllipse(b, geom.rightCheekX, geom.cheekY, rx, ry, "url(#blushR)")
@@ -202,8 +207,8 @@ func writeHighlights(b *strings.Builder, geom bodyGeom, sweatiness float64) {
 		return
 	}
 
-	rx := ff(lerp(16, 22, sweatiness))
-	ry := ff(lerp(12, 16, sweatiness))
+	rx := lerp(16, 22, sweatiness)
+	ry := lerp(12, 16, sweatiness)
 
 	writeEllipse(b, geom.leftCheekX-10, geom.cheekY-22, rx, ry, "url(#highL)")
 	writeEllipse(b, geom.rightCheekX+10, geom.cheekY-22, rx, ry, "url(#highR)")

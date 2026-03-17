@@ -168,3 +168,29 @@ func TestFf(t *testing.T) {
 		}
 	}
 }
+
+func TestToHex_NegativeAndWrappingHue(t *testing.T) {
+	// Pure red at H=0 is our reference.
+	red := hslColor{0, 1.0, 0.5}.toHex()
+
+	tests := []struct {
+		name string
+		h    float64
+		want string
+	}{
+		{"hue 360 wraps to 0", 360, red},
+		{"hue 720 wraps to 0", 720, red},
+		{"hue -360 wraps to 0", -360, red},
+		{"negative hue -60 → 300", -60, hslColor{300, 1.0, 0.5}.toHex()},
+		{"negative hue -120 → 240", -120, hslColor{240, 1.0, 0.5}.toHex()},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := hslColor{tt.h, 1.0, 0.5}.toHex()
+			if got != tt.want {
+				t.Errorf("toHex() with H=%g = %s, want %s", tt.h, got, tt.want)
+			}
+		})
+	}
+}

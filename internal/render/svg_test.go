@@ -2,17 +2,17 @@ package render
 
 import (
 	"encoding/xml"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/domain"
 )
 
-var renderer = NewSVGRenderer()
-
 func mustRender(t *testing.T, score domain.Score) string {
 	t.Helper()
-	svg, err := renderer.Render(score)
+	r := NewSVGRenderer()
+	svg, err := r.Render(score)
 	if err != nil {
 		t.Fatalf("Render(%+v) returned error: %v", score, err)
 	}
@@ -60,7 +60,7 @@ func TestRender_XMLValidity(t *testing.T) {
 		score(0, 1, 0, 1),
 	}
 	for _, s := range scores {
-		t.Run("", func(t *testing.T) {
+		t.Run(fmt.Sprintf("t%.1f_s%.1f_i%.1f_w%.1f", s.Thiccness, s.Sweatiness, s.Irritation, s.Warmth), func(t *testing.T) {
 			svg := mustRender(t, s)
 			assertValidXML(t, svg)
 		})
@@ -220,5 +220,41 @@ func TestDropletCount(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("dropletCount(%g) = %d, want %d", tt.sweatiness, got, tt.want)
 		}
+	}
+}
+
+func TestRender_ClampingOutOfRange(t *testing.T) {
+	tests := []struct {
+		name    string
+		raw     domain.Score
+		clamped domain.Score
+	}{
+		{
+			"all above 1",
+			score(1.5, 2.0, 1.1, 3.0),
+			score(1, 1, 1, 1),
+		},
+		{
+			"all below 0",
+			score(-0.5, -1.0, -0.1, -3.0),
+			score(0, 0, 0, 0),
+		},
+		{
+			"mixed out of range",
+			score(1.5, -0.5, 0.5, 2.0),
+			score(1, 0, 0.5, 1),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svgRaw := mustRender(t, tt.raw)
+			svgClamped := mustRender(t, tt.clamped)
+
+			if svgRaw != svgClamped {
+				t.Errorf("out-of-range scores should produce identical SVG to clamped equivalents")
+			}
+			assertValidXML(t, svgRaw)
+		})
 	}
 }

@@ -15,7 +15,7 @@ func TestVisualSamples(t *testing.T) {
 		t.Skip("set WRITE_SVG=1 to generate visual samples")
 	}
 
-	dir := "../../testdata"
+	dir := "../../_visual_output"
 	r := NewSVGRenderer()
 
 	levels := []float64{0, 0.5, 1}

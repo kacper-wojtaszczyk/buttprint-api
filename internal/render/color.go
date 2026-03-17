@@ -28,8 +28,13 @@ var warmthRamp = []colorStop{
 
 // toHex converts an HSL color to a "#RRGGBB" string.
 func (c hslColor) toHex() string {
+	h := math.Mod(c.H, 360)
+	if h < 0 {
+		h += 360
+	}
+
 	chroma := (1 - math.Abs(2*c.L-1)) * c.S
-	hPrime := c.H / 60
+	hPrime := h / 60
 	x := chroma * (1 - math.Abs(math.Mod(hPrime, 2)-1))
 
 	var r1, g1, b1 float64
