@@ -14,6 +14,7 @@ import (
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/config"
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/domain"
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/jackfruit"
+	"github.com/kacper-wojtaszczyk/buttprint-api/internal/scoring"
 )
 
 type app struct {
@@ -31,11 +32,10 @@ func newApp() (*app, error) {
 	cfg := config.Load()
 
 	httpClient := &http.Client{Timeout: 10 * time.Second}
-	envClient := jackfruit.NewClient(httpClient, cfg.JackfruitURL)
 
 	service := domain.NewService(
-		envClient,
-		&domain.ScorerStub{},
+		jackfruit.NewClient(httpClient, cfg.JackfruitURL),
+		scoring.NewScorer(),
 		&domain.RendererStub{},
 	)
 
