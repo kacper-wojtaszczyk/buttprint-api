@@ -39,10 +39,10 @@ type VariableResponse struct {
 }
 
 type ScoreResponse struct {
-	Composite  float64 `json:"composite"`
 	Thickness  float64 `json:"thickness"`
 	Sweatiness float64 `json:"sweatiness"`
 	Irritation float64 `json:"irritation"`
+	Warmth     float64 `json:"warmth"`
 }
 
 type LineageResponse struct {
@@ -65,10 +65,10 @@ func newButtprintResponse(buttprint domain.Buttprint, coords coords, timestamp t
 		RequestedTimestamp: timestamp,
 		Variables:          variables,
 		Score: ScoreResponse{
-			Composite:  buttprint.Score.Composite,
 			Thickness:  buttprint.Score.Thickness,
 			Sweatiness: buttprint.Score.Sweatiness,
 			Irritation: buttprint.Score.Irritation,
+			Warmth:     buttprint.Score.Warmth,
 		},
 		SVG: buttprint.SVG,
 	}

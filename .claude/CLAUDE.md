@@ -64,19 +64,23 @@ All params optional — no coords triggers IP geolocation, no timestamp defaults
 ### Jackfruit integration
 
 ```
-GET jackfruit:8080/v1/environmental?lat=X&lon=Y&timestamp=T&variables=pm2p5,pm10,temperature,humidity
+GET jackfruit:8080/v1/environmental?lat=X&lon=Y&timestamp=T&variables=pm2p5,pm10,temperature,humidity,dewpoint
 ```
 
 Called over private K8s network (ClusterIP). Pass Jackfruit's `variables` array through to the FE response. Lineage (`lineage` field per variable) is optional — Jackfruit returns null when Postgres lookup fails; treat as nullable throughout.
 
 ### Scoring
 
-Three sub-scores → composite:
-- **Thickness** — temperature + humidity
-- **Sweatiness** — humidity + temperature interaction
-- **Irritation** — PM2.5, PM10
+`Thickness` is the composite score; the others express specific atmospheric qualities:
 
-Missing variables get neutral score (0.5) so the butt renders with whatever data is available.
+| Score | Primary inputs | Drives visually |
+|---|---|---|
+| `Thickness` | temperature + humidity + pm2p5 + pm10 | Butt volume and Bézier curve geometry |
+| `Sweatiness` | dewpoint | Surface sheen, highlight opacity |
+| `Irritation` | pm2p5 (weighted higher) + pm10 | Blush redness, opacity |
+| `Warmth` | temperature only | Gradient hue (cool blue → warm red) |
+
+Missing variables are a fatal error — Jackfruit fails the entire request when a variable has no data, so partial input to the scorer indicates a programming bug. The renderer receives only `Score` — never raw variable values. All normalization lives in the scorer.
 
 ## Key Design Decisions
 

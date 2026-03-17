@@ -35,8 +35,8 @@ func stubButtprint() domain.Buttprint {
 			{Name: "temperature", Value: 25, Unit: "°C"},
 		},
 		Score: domain.Score{
-			Composite:  0.5,
-			Thickness:  0.4,
+			Thickness:  0.5,
+			Warmth:     0.4,
 			Sweatiness: 0.6,
 			Irritation: 0.3,
 		},
@@ -186,17 +186,17 @@ func TestHandleButtprint_ResponseShape(t *testing.T) {
 	if !resp.RequestedTimestamp.Equal(expectedTimestamp) {
 		t.Errorf("expected requested_timestamp %v, got %v", expectedTimestamp, resp.RequestedTimestamp)
 	}
-	if resp.Score.Composite != 0.5 {
-		t.Errorf("expected score composite 0.5, got %f", resp.Score.Composite)
+	if resp.Score.Thickness != 0.5 {
+		t.Errorf("expected thickness 0.5, got %f", resp.Score.Thickness)
 	}
-	if resp.Score.Irritation != 0.3 {
-		t.Errorf("expected irritation 0.3, got %v", resp.Score.Irritation)
+	if resp.Score.Warmth != 0.4 {
+		t.Errorf("expected warmth 0.4, got %v", resp.Score.Warmth)
 	}
 	if resp.Score.Sweatiness != 0.6 {
 		t.Errorf("expected sweatiness 0.6, got %v", resp.Score.Sweatiness)
 	}
-	if resp.Score.Thickness != 0.4 {
-		t.Errorf("expected thickness 0.4, got %v", resp.Score.Thickness)
+	if resp.Score.Irritation != 0.3 {
+		t.Errorf("expected irritation 0.3, got %v", resp.Score.Irritation)
 	}
 	if resp.SVG != "<svg/>" {
 		t.Errorf("expected SVG '<svg/>', got %q", resp.SVG)
