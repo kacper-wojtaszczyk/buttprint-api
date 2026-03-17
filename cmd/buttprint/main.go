@@ -14,6 +14,7 @@ import (
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/config"
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/domain"
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/jackfruit"
+	"github.com/kacper-wojtaszczyk/buttprint-api/internal/render"
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/scoring"
 )
 
@@ -36,7 +37,7 @@ func newApp() (*app, error) {
 	service := domain.NewService(
 		jackfruit.NewClient(httpClient, cfg.JackfruitURL),
 		scoring.NewScorer(),
-		&domain.RendererStub{},
+		render.NewSVGRenderer(),
 	)
 
 	mux := http.NewServeMux()

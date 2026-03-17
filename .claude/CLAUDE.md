@@ -71,11 +71,11 @@ Called over private K8s network (ClusterIP). Pass Jackfruit's `variables` array 
 
 ### Scoring
 
-`Thickness` is the composite score; the others express specific atmospheric qualities:
+`Thiccness` is the composite score; the others express specific atmospheric qualities:
 
 | Score | Primary inputs | Drives visually |
 |---|---|---|
-| `Thickness` | temperature + humidity + pm2p5 + pm10 | Butt volume and Bézier curve geometry |
+| `Thiccness` | temperature + humidity + pm2p5 + pm10 | Butt volume and Bézier curve geometry |
 | `Sweatiness` | dewpoint | Surface sheen, highlight opacity |
 | `Irritation` | pm2p5 (weighted higher) + pm10 | Blush redness, opacity |
 | `Warmth` | temperature only | Gradient hue (cool blue → warm red) |

@@ -39,7 +39,7 @@ type VariableResponse struct {
 }
 
 type ScoreResponse struct {
-	Thickness  float64 `json:"thickness"`
+	Thiccness  float64 `json:"thiccness"`
 	Sweatiness float64 `json:"sweatiness"`
 	Irritation float64 `json:"irritation"`
 	Warmth     float64 `json:"warmth"`
@@ -65,7 +65,7 @@ func newButtprintResponse(buttprint domain.Buttprint, coords coords, timestamp t
 		RequestedTimestamp: timestamp,
 		Variables:          variables,
 		Score: ScoreResponse{
-			Thickness:  buttprint.Score.Thickness,
+			Thiccness:  buttprint.Score.Thiccness,
 			Sweatiness: buttprint.Score.Sweatiness,
 			Irritation: buttprint.Score.Irritation,
 			Warmth:     buttprint.Score.Warmth,

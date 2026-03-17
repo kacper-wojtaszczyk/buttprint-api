@@ -18,18 +18,18 @@ The anchors: the flattest butt is a Siberian winter (cold, dry, clean); the thic
 
 ## Scores
 
-### Thickness (composite)
+### Thiccness (composite)
 
-Weighted sum of four normalized inputs. Represents overall atmospheric oppressiveness — higher means heavier, more suffocating air. Drives butt volume and Bezier curve geometry in the renderer.
+Weighted sum of four normalized inputs. Represents overall atmospheric oppressiveness — higher means heavier, more suffocating air. Drives butt volume and Bézier curve geometry in the renderer.
 
 ```
-Thickness = 0.30 * norm(temperature)
+Thiccness = 0.30 * norm(temperature)
           + 0.30 * norm(humidity)
           + 0.25 * norm(pm2p5)
           + 0.15 * norm(pm10)
 ```
 
-Temperature and humidity are weighted equally and together dominate the score (~60%) because perceived oppressiveness is primarily a heat-moisture phenomenon. PM2.5 gets more weight than PM10 because fine particulates are more acutely harmful and contribute more to the "thick air" sensation.
+Temperature and humidity are weighted equally and together dominate the score (~60%) because perceived oppressiveness is primarily a heat-moisture phenomenon. PM2.5 gets more weight than PM10 because fine particulates are more acutely harmful and contribute more to the "thicc air" sensation.
 
 ### Sweatiness
 

@@ -17,8 +17,8 @@ func closeTo(a, b float64) bool {
 
 func assertScore(t *testing.T, got, want domain.Score) {
 	t.Helper()
-	if !closeTo(got.Thickness, want.Thickness) {
-		t.Errorf("Thickness: want %v, got %v", want.Thickness, got.Thickness)
+	if !closeTo(got.Thiccness, want.Thiccness) {
+		t.Errorf("Thiccness: want %v, got %v", want.Thiccness, got.Thiccness)
 	}
 	if !closeTo(got.Sweatiness, want.Sweatiness) {
 		t.Errorf("Sweatiness: want %v, got %v", want.Sweatiness, got.Sweatiness)
@@ -62,7 +62,7 @@ func TestCalculate_MidRange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	assertScore(t, score, domain.Score{Thickness: 0.5, Sweatiness: 0.5, Irritation: 0.5, Warmth: 0.5})
+	assertScore(t, score, domain.Score{Thiccness: 0.5, Sweatiness: 0.5, Irritation: 0.5, Warmth: 0.5})
 }
 
 func TestCalculate_AllMinimum(t *testing.T) {
@@ -80,7 +80,7 @@ func TestCalculate_AllMaximum(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	assertScore(t, score, domain.Score{Thickness: 1.0, Sweatiness: 1.0, Irritation: 1.0, Warmth: 1.0})
+	assertScore(t, score, domain.Score{Thiccness: 1.0, Sweatiness: 1.0, Irritation: 1.0, Warmth: 1.0})
 }
 
 // TestCalculate_Weights verifies that each weight contributes correctly by
@@ -95,22 +95,22 @@ func TestCalculate_Weights(t *testing.T) {
 		{
 			name: "only temperature at max",
 			vars: allVars(48, 10, -20, 0, 0),
-			want: domain.Score{Thickness: 0.30, Warmth: 1.0},
+			want: domain.Score{Thiccness: 0.30, Warmth: 1.0},
 		},
 		{
 			name: "only humidity at max",
 			vars: allVars(-30, 98, -20, 0, 0),
-			want: domain.Score{Thickness: 0.30},
+			want: domain.Score{Thiccness: 0.30},
 		},
 		{
 			name: "only pm2p5 at max",
 			vars: allVars(-30, 10, -20, 300, 0),
-			want: domain.Score{Thickness: 0.25, Irritation: 0.65},
+			want: domain.Score{Thiccness: 0.25, Irritation: 0.65},
 		},
 		{
 			name: "only pm10 at max",
 			vars: allVars(-30, 10, -20, 0, 500),
-			want: domain.Score{Thickness: 0.15, Irritation: 0.35},
+			want: domain.Score{Thiccness: 0.15, Irritation: 0.35},
 		},
 		{
 			name: "only dewpoint at max",
@@ -146,7 +146,7 @@ func TestCalculate_ClampHigh(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	assertScore(t, score, domain.Score{Thickness: 1.0, Sweatiness: 1.0, Irritation: 1.0, Warmth: 1.0})
+	assertScore(t, score, domain.Score{Thiccness: 1.0, Sweatiness: 1.0, Irritation: 1.0, Warmth: 1.0})
 }
 
 func TestCalculate_EmptyInput(t *testing.T) {
@@ -267,5 +267,5 @@ func TestCalculate_ExtraVariablesIgnored(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	assertScore(t, score, domain.Score{Thickness: 0.5, Sweatiness: 0.5, Irritation: 0.5, Warmth: 0.5})
+	assertScore(t, score, domain.Score{Thiccness: 0.5, Sweatiness: 0.5, Irritation: 0.5, Warmth: 0.5})
 }
