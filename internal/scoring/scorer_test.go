@@ -2,6 +2,7 @@ package scoring
 
 import (
 	"math"
+	"slices"
 	"strings"
 	"testing"
 
@@ -37,6 +38,15 @@ func allVars(temp, hum, dew, pm25, pm10 float64) []domain.VariableData {
 		{Name: "dewpoint", Value: dew},
 		{Name: "pm2p5", Value: pm25},
 		{Name: "pm10", Value: pm10},
+	}
+}
+
+func TestRequiredVariables(t *testing.T) {
+	s := NewScorer()
+	want := []string{"temperature", "humidity", "dewpoint", "pm2p5", "pm10"}
+	got := s.RequiredVariables()
+	if !slices.Equal(got, want) {
+		t.Errorf("RequiredVariables() = %v, want %v", got, want)
 	}
 }
 
