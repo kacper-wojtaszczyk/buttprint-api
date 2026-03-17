@@ -14,6 +14,7 @@ bin/
 # Go test binaries and output
 *.test
 *.out
+/testdata/
 
 # Go test coverage
 coverage.out
