@@ -16,6 +16,9 @@ func TestVisualSamples(t *testing.T) {
 	}
 
 	dir := "../../_visual_output"
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create output dir: %v", err)
+	}
 	r := NewSVGRenderer()
 
 	levels := []float64{0, 0.5, 1}
