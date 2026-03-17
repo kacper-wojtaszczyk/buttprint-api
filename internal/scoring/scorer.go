@@ -2,10 +2,13 @@ package scoring
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/domain"
 )
 
+// Calibration ranges: each variable is linearly normalized to [0, 1].
+// See docs/scoring-formula.md for rationale.
 const (
 	tempMin = -30.0
 	tempMax = 48.0
@@ -17,15 +20,23 @@ const (
 	pm25Max = 300.0
 	pm10Min = 0.0
 	pm10Max = 500.0
+)
 
+// Thickness weights (must sum to 1.0).
+const (
 	tempWeight = 0.30
 	humWeight  = 0.30
 	pm25Weight = 0.25
 	pm10Weight = 0.15
+)
 
+// Irritation weights (must sum to 1.0).
+const (
 	pm25IrritationWeight = 0.65
 	pm10IrritationWeight = 0.35
 )
+
+var requiredVariables = []string{"temperature", "humidity", "dewpoint", "pm2p5", "pm10"}
 
 type Scorer struct{}
 
@@ -34,36 +45,20 @@ func NewScorer() *Scorer {
 }
 
 func (s *Scorer) RequiredVariables() []string {
-	return []string{"temperature", "humidity", "dewpoint", "pm2p5", "pm10"}
+	return requiredVariables
 }
 
 func (s *Scorer) Calculate(variableData []domain.VariableData) (domain.Score, error) {
-	temp, ok := findVariable(variableData, "temperature")
-	if !ok {
-		return domain.Score{}, fmt.Errorf("scorer: missing required variable %q — this is a bug; Jackfruit should have failed first", "temperature")
-	}
-	hum, ok := findVariable(variableData, "humidity")
-	if !ok {
-		return domain.Score{}, fmt.Errorf("scorer: missing required variable %q — this is a bug; Jackfruit should have failed first", "humidity")
-	}
-	dew, ok := findVariable(variableData, "dewpoint")
-	if !ok {
-		return domain.Score{}, fmt.Errorf("scorer: missing required variable %q — this is a bug; Jackfruit should have failed first", "dewpoint")
-	}
-	pm25, ok := findVariable(variableData, "pm2p5")
-	if !ok {
-		return domain.Score{}, fmt.Errorf("scorer: missing required variable %q — this is a bug; Jackfruit should have failed first", "pm2p5")
-	}
-	pm10, ok := findVariable(variableData, "pm10")
-	if !ok {
-		return domain.Score{}, fmt.Errorf("scorer: missing required variable %q — this is a bug; Jackfruit should have failed first", "pm10")
+	vars, err := buildVarMap(variableData)
+	if err != nil {
+		return domain.Score{}, err
 	}
 
-	normTemp := normalize(temp, tempMin, tempMax)
-	normHum := normalize(hum, humMin, humMax)
-	normDew := normalize(dew, dewMin, dewMax)
-	normPM25 := normalize(pm25, pm25Min, pm25Max)
-	normPM10 := normalize(pm10, pm10Min, pm10Max)
+	normTemp := normalize(vars["temperature"], tempMin, tempMax)
+	normHum := normalize(vars["humidity"], humMin, humMax)
+	normDew := normalize(vars["dewpoint"], dewMin, dewMax)
+	normPM25 := normalize(vars["pm2p5"], pm25Min, pm25Max)
+	normPM10 := normalize(vars["pm10"], pm10Min, pm10Max)
 
 	return domain.Score{
 		Thickness:  tempWeight*normTemp + humWeight*normHum + pm25Weight*normPM25 + pm10Weight*normPM10,
@@ -73,17 +68,30 @@ func (s *Scorer) Calculate(variableData []domain.VariableData) (domain.Score, er
 	}, nil
 }
 
-func findVariable(vars []domain.VariableData, name string) (float64, bool) {
-	for _, v := range vars {
-		if v.Name == name {
-			return v.Value, true
+func buildVarMap(variableData []domain.VariableData) (map[string]float64, error) {
+	vars := make(map[string]float64, len(variableData))
+	for _, v := range variableData {
+		vars[v.Name] = v.Value
+	}
+
+	var missing []string
+	for _, name := range requiredVariables {
+		if _, ok := vars[name]; !ok {
+			missing = append(missing, name)
 		}
 	}
-	return 0, false
+	if len(missing) > 0 {
+		return nil, fmt.Errorf(
+			"scorer: missing required variable(s) [%s] — this is a bug; Jackfruit should have failed first",
+			strings.Join(missing, ", "),
+		)
+	}
+
+	return vars, nil
 }
 
-func normalize(value, min, max float64) float64 {
-	n := (value - min) / (max - min)
+func normalize(value, lo, hi float64) float64 {
+	n := (value - lo) / (hi - lo)
 	if n < 0 {
 		return 0
 	}

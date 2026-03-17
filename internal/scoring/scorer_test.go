@@ -83,6 +83,83 @@ func TestCalculate_AllMaximum(t *testing.T) {
 	}
 }
 
+// TestCalculate_Weights verifies that each weight contributes correctly by
+// setting one variable to its maximum and all others to their minimum.
+// Only the maxed variable's weight should appear in the relevant score.
+func TestCalculate_Weights(t *testing.T) {
+	tests := []struct {
+		name       string
+		vars       []domain.VariableData
+		thickness  float64
+		sweatiness float64
+		irritation float64
+		warmth     float64
+	}{
+		{
+			name:       "only temperature at max",
+			vars:       allVars(48, 10, -20, 0, 0),
+			thickness:  0.30, // tempWeight
+			sweatiness: 0.0,
+			irritation: 0.0,
+			warmth:     1.0,
+		},
+		{
+			name:       "only humidity at max",
+			vars:       allVars(-30, 98, -20, 0, 0),
+			thickness:  0.30, // humWeight
+			sweatiness: 0.0,
+			irritation: 0.0,
+			warmth:     0.0,
+		},
+		{
+			name:       "only pm2p5 at max",
+			vars:       allVars(-30, 10, -20, 300, 0),
+			thickness:  0.25, // pm25Weight
+			sweatiness: 0.0,
+			irritation: 0.65, // pm25IrritationWeight
+			warmth:     0.0,
+		},
+		{
+			name:       "only pm10 at max",
+			vars:       allVars(-30, 10, -20, 0, 500),
+			thickness:  0.15, // pm10Weight
+			sweatiness: 0.0,
+			irritation: 0.35, // pm10IrritationWeight
+			warmth:     0.0,
+		},
+		{
+			name:       "only dewpoint at max",
+			vars:       allVars(-30, 10, 32, 0, 0),
+			thickness:  0.0,
+			sweatiness: 1.0,
+			irritation: 0.0,
+			warmth:     0.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewScorer()
+			score, err := s.Calculate(tt.vars)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if score.Thickness != tt.thickness {
+				t.Errorf("Thickness: expected %v, got %v", tt.thickness, score.Thickness)
+			}
+			if score.Sweatiness != tt.sweatiness {
+				t.Errorf("Sweatiness: expected %v, got %v", tt.sweatiness, score.Sweatiness)
+			}
+			if score.Irritation != tt.irritation {
+				t.Errorf("Irritation: expected %v, got %v", tt.irritation, score.Irritation)
+			}
+			if score.Warmth != tt.warmth {
+				t.Errorf("Warmth: expected %v, got %v", tt.warmth, score.Warmth)
+			}
+		})
+	}
+}
+
 func TestCalculate_ClampLow(t *testing.T) {
 	s := NewScorer()
 	score, err := s.Calculate(allVars(-100, 0, -100, -50, -100))

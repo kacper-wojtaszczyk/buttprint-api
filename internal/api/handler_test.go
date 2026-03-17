@@ -36,9 +36,9 @@ func stubButtprint() domain.Buttprint {
 		},
 		Score: domain.Score{
 			Thickness:  0.5,
-			Warmth:     0.4,
 			Sweatiness: 0.6,
 			Irritation: 0.3,
+			Warmth:     0.4,
 		},
 		SVG: "<svg/>",
 	}
