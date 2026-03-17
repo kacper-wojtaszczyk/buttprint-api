@@ -15,18 +15,39 @@ func NewSVGRenderer() *SVGRenderer {
 	return &SVGRenderer{}
 }
 
+type bodyGeom struct {
+	thickness                       float64
+	topY, sideX, sideY, bottomY    float64
+	cheekY, leftCheekX, rightCheekX float64
+}
+
+func newBodyGeom(t float64) bodyGeom {
+	sideX := lerp(75, 30, t)
+	return bodyGeom{
+		thickness:   t,
+		topY:        lerp(85, 50, t),
+		sideX:       sideX,
+		sideY:       lerp(130, 125, t),
+		bottomY:     lerp(175, 215, t),
+		cheekY:      lerp(135, 145, t),
+		leftCheekX:  (120 + sideX) / 2,
+		rightCheekX: (120 + (240 - sideX)) / 2,
+	}
+}
+
 // Render is deterministic: same input always produces identical output.
 func (r *SVGRenderer) Render(score domain.Score) (string, error) {
 	var b strings.Builder
+	geom := newBodyGeom(score.Thickness)
 
 	b.WriteString(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 260">`)
 
 	writeGradientDefs(&b, score)
-	writeBodyShape(&b, score.Thickness, score.Warmth)
-	writeCrease(&b, score.Thickness, score.Warmth)
-	writeBlush(&b, score.Thickness, score.Irritation)
-	writeHighlights(&b, score.Thickness, score.Sweatiness)
-	writeDroplets(&b, score.Thickness, score.Sweatiness)
+	writeBodyShape(&b, geom, score.Warmth)
+	writeCrease(&b, geom, score.Warmth)
+	writeBlush(&b, geom, score.Irritation)
+	writeHighlights(&b, geom, score.Sweatiness)
+	writeDroplets(&b, geom, score.Sweatiness)
 
 	b.WriteString(`</svg>`)
 
@@ -50,32 +71,22 @@ func writeGradientDefs(b *strings.Builder, score domain.Score) {
 		blushColor := blushHex(score.Irritation)
 		opacity := ff(lerp(0.02, 0.55, score.Irritation))
 
-		fmt.Fprintf(b, `<radialGradient id="blushL" cx="50%%" cy="50%%" r="50%%">`+
-			`<stop offset="0%%" stop-color="%s" stop-opacity="%s"/>`+
-			`<stop offset="100%%" stop-color="%s" stop-opacity="0"/>`+
-			`</radialGradient>`, blushColor, opacity, blushColor)
-
-		fmt.Fprintf(b, `<radialGradient id="blushR" cx="50%%" cy="50%%" r="50%%">`+
-			`<stop offset="0%%" stop-color="%s" stop-opacity="%s"/>`+
-			`<stop offset="100%%" stop-color="%s" stop-opacity="0"/>`+
-			`</radialGradient>`, blushColor, opacity, blushColor)
+		writeFadingGradient(b, "blushL", blushColor, opacity)
+		writeFadingGradient(b, "blushR", blushColor, opacity)
 	}
 
 	if score.Sweatiness >= 0.05 {
 		opacity := ff(lerp(0.02, 0.50, score.Sweatiness))
 
-		fmt.Fprintf(b, `<radialGradient id="highL" cx="50%%" cy="50%%" r="50%%">`+
-			`<stop offset="0%%" stop-color="#FFFFFF" stop-opacity="%s"/>`+
-			`<stop offset="100%%" stop-color="#FFFFFF" stop-opacity="0"/>`+
-			`</radialGradient>`, opacity)
-
-		fmt.Fprintf(b, `<radialGradient id="highR" cx="50%%" cy="50%%" r="50%%">`+
-			`<stop offset="0%%" stop-color="#FFFFFF" stop-opacity="%s"/>`+
-			`<stop offset="100%%" stop-color="#FFFFFF" stop-opacity="0"/>`+
-			`</radialGradient>`, opacity)
+		writeFadingGradient(b, "highL", "#FFFFFF", opacity)
+		writeFadingGradient(b, "highR", "#FFFFFF", opacity)
 	}
 
 	b.WriteString(`</defs>`)
+}
+
+func strokeColor(warmth float64) string {
+	return warmthColor(warmth).withLightness(-0.15).withSaturation(0.10).toHex()
 }
 
 // blushHex interpolates from soft pink (#E08080) to angry red (#C02020).
@@ -88,14 +99,21 @@ func blushHex(irritation float64) string {
 	return c.toHex()
 }
 
-// writeBodyShape draws 4 cubic Bézier segments forming a peach shape, symmetric around x=120.
-func writeBodyShape(b *strings.Builder, thickness, warmth float64) {
-	t := thickness
+func writeFadingGradient(b *strings.Builder, id, color, opacity string) {
+	fmt.Fprintf(b, `<radialGradient id="%s" cx="50%%" cy="50%%" r="50%%">`+
+		`<stop offset="0%%" stop-color="%s" stop-opacity="%s"/>`+
+		`<stop offset="100%%" stop-color="%s" stop-opacity="0"/>`+
+		`</radialGradient>`, id, color, opacity, color)
+}
 
-	topY := lerp(85, 50, t)
-	sideX := lerp(75, 30, t)
-	sideY := lerp(130, 125, t)
-	bottomY := lerp(175, 215, t)
+func writeEllipse(b *strings.Builder, cx, cy float64, rx, ry, fill string) {
+	fmt.Fprintf(b, `<ellipse cx="%s" cy="%s" rx="%s" ry="%s" fill="%s"/>`,
+		ff(cx), ff(cy), rx, ry, fill)
+}
+
+// writeBodyShape draws 4 cubic Bézier segments forming a peach shape, symmetric around x=120.
+func writeBodyShape(b *strings.Builder, geom bodyGeom, warmth float64) {
+	t := geom.thickness
 	path := fmt.Sprintf(
 		`M %s %s `+
 			`C %s %s, %s %s, %s %s `+
@@ -104,51 +122,44 @@ func writeBodyShape(b *strings.Builder, thickness, warmth float64) {
 			`C %s %s, %s %s, %s %s Z`,
 
 		// Start: top center
-		ff(120), ff(topY),
+		ff(120), ff(geom.topY),
 
 		// Seg 1: top → left side
-		ff(lerp(95, 75, t)), ff(topY),
-		ff(sideX), ff(lerp(90, 75, t)),
-		ff(sideX), ff(sideY),
+		ff(lerp(95, 75, t)), ff(geom.topY),
+		ff(geom.sideX), ff(lerp(90, 75, t)),
+		ff(geom.sideX), ff(geom.sideY),
 
 		// Seg 2: left side → bottom center
-		ff(sideX), ff(lerp(165, 185, t)),
+		ff(geom.sideX), ff(lerp(165, 185, t)),
 		ff(lerp(95, 80, t)), ff(lerp(185, 210, t)),
-		ff(120), ff(bottomY),
+		ff(120), ff(geom.bottomY),
 
 		// Seg 3: bottom center → right side (mirror)
 		ff(240-lerp(95, 80, t)), ff(lerp(185, 210, t)),
-		ff(240-sideX), ff(lerp(165, 185, t)),
-		ff(240-sideX), ff(sideY),
+		ff(240-geom.sideX), ff(lerp(165, 185, t)),
+		ff(240-geom.sideX), ff(geom.sideY),
 
 		// Seg 4: right side → top (mirror)
-		ff(240-sideX), ff(lerp(90, 75, t)),
-		ff(240-lerp(95, 75, t)), ff(topY),
-		ff(120), ff(topY),
+		ff(240-geom.sideX), ff(lerp(90, 75, t)),
+		ff(240-lerp(95, 75, t)), ff(geom.topY),
+		ff(120), ff(geom.topY),
 	)
 
-	base := warmthColor(warmth)
-	strokeColor := base.withLightness(-0.15).withSaturation(0.10).toHex()
-	strokeWidth := ff(lerp(2.0, 3.5, thickness))
+	strokeWidth := ff(lerp(2.0, 3.5, t))
 
 	fmt.Fprintf(b, `<path d="%s" fill="url(#bodyGrad)" stroke="%s" stroke-width="%s" stroke-linejoin="round"/>`,
-		path, strokeColor, strokeWidth)
+		path, strokeColor(warmth), strokeWidth)
 }
 
-func writeCrease(b *strings.Builder, thickness, warmth float64) {
-	t := thickness
+func writeCrease(b *strings.Builder, geom bodyGeom, warmth float64) {
+	t := geom.thickness
 
-	topY := lerp(85, 50, t)
-	bottomY := lerp(175, 215, t)
-
-	creaseTop := topY + lerp(15, 20, t)
-	creaseBottom := bottomY - lerp(5, 10, t)
+	creaseTop := geom.topY + lerp(15, 20, t)
+	creaseBottom := geom.bottomY - lerp(5, 10, t)
 
 	// Both control points shift left for a gentle arc.
 	bow := lerp(1, 8, t)
 
-	base := warmthColor(warmth)
-	strokeColor := base.withLightness(-0.15).withSaturation(0.10).toHex()
 	strokeWidth := ff(lerp(2.0, 4.0, t))
 
 	fmt.Fprintf(b, `<path d="M %s %s C %s %s, %s %s, %s %s" fill="none" stroke="%s" stroke-width="%s" stroke-linecap="round"/>`,
@@ -156,72 +167,49 @@ func writeCrease(b *strings.Builder, thickness, warmth float64) {
 		ff(120-bow), ff(creaseTop+(creaseBottom-creaseTop)*0.33),
 		ff(120-bow), ff(creaseTop+(creaseBottom-creaseTop)*0.66),
 		ff(120), ff(creaseBottom),
-		strokeColor, strokeWidth)
+		strokeColor(warmth), strokeWidth)
 }
 
-func writeBlush(b *strings.Builder, thickness, irritation float64) {
+func writeBlush(b *strings.Builder, geom bodyGeom, irritation float64) {
 	if irritation < 0.05 {
 		return
 	}
 
-	t := thickness
-
-	sideX := lerp(75, 30, t)
-	leftCX := (120 + sideX) / 2
-	rightCX := (120 + (240 - sideX)) / 2
-	cheekY := lerp(135, 145, t)
-
 	rx := ff(lerp(18, 35, irritation))
 	ry := ff(lerp(14, 28, irritation))
 
-	fmt.Fprintf(b, `<ellipse cx="%s" cy="%s" rx="%s" ry="%s" fill="url(#blushL)"/>`,
-		ff(leftCX), ff(cheekY), rx, ry)
-	fmt.Fprintf(b, `<ellipse cx="%s" cy="%s" rx="%s" ry="%s" fill="url(#blushR)"/>`,
-		ff(rightCX), ff(cheekY), rx, ry)
+	writeEllipse(b, geom.leftCheekX, geom.cheekY, rx, ry, "url(#blushL)")
+	writeEllipse(b, geom.rightCheekX, geom.cheekY, rx, ry, "url(#blushR)")
 }
 
-func writeHighlights(b *strings.Builder, thickness, sweatiness float64) {
+func writeHighlights(b *strings.Builder, geom bodyGeom, sweatiness float64) {
 	if sweatiness < 0.05 {
 		return
 	}
 
-	t := thickness
-
-	sideX := lerp(75, 30, t)
-	leftCX := (120+sideX)/2 - 10
-	rightCX := (120+(240-sideX))/2 + 10
-	cheekY := lerp(135, 145, t) - 22
-
 	rx := ff(lerp(16, 22, sweatiness))
 	ry := ff(lerp(12, 16, sweatiness))
 
-	fmt.Fprintf(b, `<ellipse cx="%s" cy="%s" rx="%s" ry="%s" fill="url(#highL)"/>`,
-		ff(leftCX), ff(cheekY), rx, ry)
-	fmt.Fprintf(b, `<ellipse cx="%s" cy="%s" rx="%s" ry="%s" fill="url(#highR)"/>`,
-		ff(rightCX), ff(cheekY), rx, ry)
+	writeEllipse(b, geom.leftCheekX-10, geom.cheekY-22, rx, ry, "url(#highL)")
+	writeEllipse(b, geom.rightCheekX+10, geom.cheekY-22, rx, ry, "url(#highR)")
 }
 
 // writeDroplets uses a Vogel sunflower spiral mapped to an ellipse covering
 // the lower half of the butt, with a parabolic U-lift so outer droplets rise
 // toward the outline while center ones hang low.
-func writeDroplets(b *strings.Builder, thickness, sweatiness float64) {
+func writeDroplets(b *strings.Builder, geom bodyGeom, sweatiness float64) {
 	count := dropletCount(sweatiness)
 	if count == 0 {
 		return
 	}
 
-	t := thickness
-
-	sideX := lerp(75, 30, t)
-	halfWidth := (120 - sideX) * 0.9
-	midY := lerp(130, 125, t)
-	bottomY := lerp(175, 215, t)
-	centerY := midY + (bottomY-midY)*0.65 // gravity bias
-	halfHeight := (bottomY - midY) / 2 * 0.75
-	scale := lerp(0.7, 1.4, t)
+	halfWidth := (120 - geom.sideX) * 0.9
+	centerY := geom.sideY + (geom.bottomY-geom.sideY)*0.65 // gravity bias
+	halfHeight := (geom.bottomY - geom.sideY) / 2 * 0.75
+	scale := lerp(0.7, 1.4, geom.thickness)
 
 	goldenAngle := math.Pi * (3 - math.Sqrt(5)) // ≈137.5°
-	uLift := (bottomY - midY) * 0.55
+	uLift := (geom.bottomY - geom.sideY) * 0.55
 
 	for i := 0; i < count; i++ {
 		// Exponent 0.4 (< sqrt) pushes inner points outward at small N.
