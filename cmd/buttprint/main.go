@@ -32,7 +32,7 @@ func newApp() (*app, error) {
 
 	cfg := config.Load()
 
-	httpClient := &http.Client{Timeout: 10 * time.Second}
+	httpClient := &http.Client{Timeout: 20 * time.Second}
 
 	service := domain.NewService(
 		jackfruit.NewClient(httpClient, cfg.JackfruitURL),
@@ -46,7 +46,7 @@ func newApp() (*app, error) {
 		Addr:         ":" + cfg.Port,
 		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		WriteTimeout: 25 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
