@@ -9,3 +9,13 @@ updates:
         update-types: ["major", "minor"]
       go-patch:
         update-types: ["patch"]
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      docker-major-minor:
+        update-types: ["major", "minor"]
+      docker-patch:
+        update-types: ["patch"]
