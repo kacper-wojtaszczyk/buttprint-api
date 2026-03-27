@@ -36,3 +36,10 @@ vendor/
 
 # JetBrains / GoLand
 /.idea/
+
+# Data
+/data/
+
+# MaxMind GeoLite2
+*.mmdb
+.maxmind-credentials
