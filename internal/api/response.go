@@ -22,10 +22,8 @@ type ButtprintResponse struct {
 }
 
 type LocationResponse struct {
-	Lat    float64 `json:"lat"`
-	Lon    float64 `json:"lon"`
-	Name   string  `json:"name,omitempty"`
-	Source string  `json:"source"`
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
 }
 
 type VariableResponse struct {
@@ -58,9 +56,8 @@ func newButtprintResponse(buttprint domain.Buttprint, coords coords, timestamp t
 	}
 	return ButtprintResponse{
 		Location: LocationResponse{
-			Lat:    coords.Lat,
-			Lon:    coords.Lon,
-			Source: "explicit",
+			Lat: coords.Lat,
+			Lon: coords.Lon,
 		},
 		RequestedTimestamp: timestamp,
 		Variables:          variables,

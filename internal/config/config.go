@@ -3,8 +3,9 @@ package config
 import "os"
 
 type Config struct {
-	Port         string
-	JackfruitURL string
+	Port          string
+	JackfruitURL  string
+	MaxMindDBPath string
 }
 
 func getEnv(key, fallback string) string {
@@ -17,7 +18,8 @@ func getEnv(key, fallback string) string {
 
 func Load() *Config {
 	return &Config{
-		Port:         getEnv("PORT", "8080"),
-		JackfruitURL: getEnv("JACKFRUIT_URL", "http://localhost:8080"),
+		Port:          getEnv("PORT", "8080"),
+		JackfruitURL:  getEnv("JACKFRUIT_URL", "http://localhost:8080"),
+		MaxMindDBPath: getEnv("MAXMIND_DB_PATH", "/data/GeoLite2-City.mmdb"),
 	}
 }

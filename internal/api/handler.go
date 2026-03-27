@@ -8,20 +8,27 @@ import (
 	"time"
 
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/domain"
+	"github.com/kacper-wojtaszczyk/buttprint-api/internal/geoloc"
 )
 
 type buttprintProvider interface {
 	GetButtprint(ctx context.Context, lat, lon float64, timestamp time.Time) (domain.Buttprint, error)
 }
 
+type ipResolver interface {
+	Resolve(ip string) (lat, lon float64, err error)
+}
+
 type Handler struct {
 	buttprintProvider buttprintProvider
+	ipResolver        ipResolver
 	logger            *slog.Logger
 }
 
-func NewHandler(provider buttprintProvider, logger *slog.Logger) *Handler {
+func NewHandler(provider buttprintProvider, ipResolver ipResolver, logger *slog.Logger) *Handler {
 	return &Handler{
 		buttprintProvider: provider,
+		ipResolver:        ipResolver,
 		logger:            logger,
 	}
 }
@@ -46,8 +53,23 @@ func (h *Handler) handleButtprint(w http.ResponseWriter, r *http.Request) {
 	if br.Coords != nil {
 		c = *br.Coords
 	} else {
-		writeError(w, http.StatusBadRequest, "coords are required (for now)")
-		return
+		ip := clientIP(r)
+		lat, lon, err := h.ipResolver.Resolve(ip)
+		if err != nil {
+			if errors.Is(err, geoloc.ErrPrivateIP) {
+				h.logger.Info("cannot geolocate private IP", "ip", ip)
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else if errors.Is(err, geoloc.ErrLookupFailed) {
+				h.logger.Warn("ip geolocation lookup failed", "ip", ip, "err", err)
+				writeError(w, http.StatusBadRequest, "geolocation lookup failed")
+			} else {
+				h.logger.Error("unexpected ip resolution error", "ip", ip, "err", err)
+				writeError(w, http.StatusInternalServerError, "internal server error")
+			}
+			return
+		}
+
+		c = coords{Lat: lat, Lon: lon}
 	}
 
 	var ts time.Time
