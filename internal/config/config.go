@@ -20,6 +20,6 @@ func Load() *Config {
 	return &Config{
 		Port:          getEnv("PORT", "8080"),
 		JackfruitURL:  getEnv("JACKFRUIT_URL", "http://localhost:8080"),
-		MaxMindDBPath: getEnv("MAXMIND_DB_PATH", "data/GeoLite2-City.mmdb"),
+		MaxMindDBPath: getEnv("MAXMIND_DB_PATH", "/data/GeoLite2-City.mmdb"),
 	}
 }

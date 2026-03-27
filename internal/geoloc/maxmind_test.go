@@ -11,9 +11,9 @@ func TestMaxMindResolver_Integration(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	dbPath := os.Getenv("GEOLITE2_DB_PATH")
+	dbPath := os.Getenv("MAXMIND_DB_PATH")
 	if dbPath == "" {
-		t.Skip("GEOLITE2_DB_PATH not set")
+		t.Skip("MAXMIND_DB_PATH not set")
 	}
 
 	resolver, err := NewMaxMindResolver(dbPath)

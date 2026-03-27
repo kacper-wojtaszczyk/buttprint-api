@@ -56,13 +56,15 @@ func (h *Handler) handleButtprint(w http.ResponseWriter, r *http.Request) {
 		ip := clientIP(r)
 		lat, lon, err := h.ipResolver.Resolve(ip)
 		if err != nil {
-			h.logger.Error("failed to resolve ip", "ip", ip, "err", err)
 			if errors.Is(err, geoloc.ErrPrivateIP) {
+				h.logger.Info("cannot geolocate private IP", "ip", ip)
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else if errors.Is(err, geoloc.ErrLookupFailed) {
-				writeError(w, http.StatusBadRequest, err.Error())
+				h.logger.Warn("ip geolocation lookup failed", "ip", ip, "err", err)
+				writeError(w, http.StatusBadRequest, "geolocation lookup failed")
 			} else {
-				writeError(w, http.StatusInternalServerError, err.Error())
+				h.logger.Error("unexpected ip resolution error", "ip", ip, "err", err)
+				writeError(w, http.StatusInternalServerError, "internal server error")
 			}
 			return
 		}
