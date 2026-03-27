@@ -40,7 +40,7 @@ func (r *MaxMindResolver) Resolve(ip string) (lat, lon float64, err error) {
 
 	record, err := r.reader.City(parsed)
 	if err != nil {
-		return 0, 0, fmt.Errorf("%w: %v", ErrLookupFailed, err)
+		return 0, 0, fmt.Errorf("%w: %w", ErrLookupFailed, err)
 	}
 
 	if record.Location.AccuracyRadius == 0 {
