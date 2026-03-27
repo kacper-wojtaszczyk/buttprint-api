@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -24,7 +25,7 @@ type app struct {
 	cfg        *config.Config
 	logger     *slog.Logger
 	server     *http.Server
-	ipResolver *geoloc.MaxMindResolver
+	ipResolver io.Closer
 }
 
 func newApp() (*app, error) {

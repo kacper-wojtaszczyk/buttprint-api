@@ -7,8 +7,13 @@ import (
 	"github.com/oschwald/geoip2-golang"
 )
 
+type geoipReader interface {
+	City(ip net.IP) (*geoip2.City, error)
+	Close() error
+}
+
 type MaxMindResolver struct {
-	reader *geoip2.Reader
+	reader geoipReader
 }
 
 func NewMaxMindResolver(dbPath string) (*MaxMindResolver, error) {
@@ -36,6 +41,10 @@ func (r *MaxMindResolver) Resolve(ip string) (lat, lon float64, err error) {
 	record, err := r.reader.City(parsed)
 	if err != nil {
 		return 0, 0, fmt.Errorf("%w: %v", ErrLookupFailed, err)
+	}
+
+	if record.Location.AccuracyRadius == 0 {
+		return 0, 0, fmt.Errorf("%w: no location data for IP %s", ErrLookupFailed, ip)
 	}
 
 	return record.Location.Latitude, record.Location.Longitude, nil

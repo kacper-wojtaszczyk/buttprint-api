@@ -281,8 +281,6 @@ func TestHandleButtprint_DefaultTimestamp(t *testing.T) {
 	}
 }
 
-// --- Exercise 7: IP geolocation handler tests ---
-
 func TestHandleButtprint_IPGeoloc(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -308,6 +306,11 @@ func TestHandleButtprint_IPGeoloc(t *testing.T) {
 			name:       "wrapped lookup failed",
 			resolver:   &mockIPResolver{err: fmt.Errorf("%w: connection timeout", geoloc.ErrLookupFailed)},
 			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "malformed IP from resolver",
+			resolver:   &mockIPResolver{err: fmt.Errorf("malformed IP address: not-an-ip")},
+			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name:       "unknown resolver error",
