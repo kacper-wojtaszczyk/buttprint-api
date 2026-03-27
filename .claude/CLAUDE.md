@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working in the Buttprint API rep
 
 ## What This Is
 
-Go HTTP service. The brains of [Buttprint](../docs/buttprint.md). Sits between the SvelteKit FE and the private Jackfruit data API:
+Go HTTP service. The brains of Buttprint. Sits between the SvelteKit FE and the private Jackfruit data API:
 
 ```
 Browser (FE) → Buttprint API (this, public) → Jackfruit (Go, private network)
@@ -12,24 +12,21 @@ Browser (FE) → Buttprint API (this, public) → Jackfruit (Go, private network
 
 Accepts `(lat, lon, timestamp)` from the FE (or resolves location from request IP), queries Jackfruit for raw environmental data, normalizes scores, generates a parametric SVG butt, returns SVG + metadata.
 
-**Full spec:** [docs/buttprint-api-spec.md](../docs/buttprint-api-spec.md)
 
 ## Commands
 
 ```bash
-# (stubs — fill in as project is scaffolded)
 go run ./cmd/buttprint              # Start server (default port 8080)
 go build -o bin/buttprint ./cmd/buttprint  # Build binary
 go test ./...                       # Run all tests
 go vet ./...                        # Static analysis
-make test                           # All tests (when Makefile exists)
 ```
 
-Go 1.23+. Net/http standard library (or Chi/Echo if needed). No CGO.
+Go 1.26+. Net/http standard library. No CGO.
 
 ## Architecture
 
-### Module layout (planned)
+### Module layout
 
 ```
 cmd/
@@ -38,18 +35,25 @@ cmd/
 
 internal/
 ├── api/
-│   ├── handler.go              ← HTTP handler for /buttprint
-│   └── middleware.go           ← rate limiting, CORS, logging
+│   ├── handler.go              ← HTTP handlers, ipResolver interface, route registration
+│   ├── request.go              ← query parameter parsing and validation
+│   ├── response.go             ← response structs and JSON serialization
+│   └── client_ip.go            ← X-Forwarded-For extraction
+├── config/
+│   └── config.go               ← environment variable loading
+├── domain/
+│   ├── buttprint.go            ← service orchestrator, domain types, provider/scorer/renderer interfaces
+│   └── errors.go               ← ErrNoData, ErrUpstream
 ├── geoloc/
-│   ├── resolver.go             ← interface: Resolver { Resolve(ip) → (lat, lon, name) }
-│   └── maxmind.go              ← MaxMind GeoLite2 implementation
+│   ├── maxmind.go              ← MaxMind GeoLite2 implementation
+│   └── errors.go               ← ErrPrivateIP, ErrLookupFailed
 ├── jackfruit/
 │   └── client.go               ← HTTP client for Jackfruit API
 ├── scoring/
 │   └── scorer.go               ← normalization + composite scoring
 └── render/
-    ├── renderer.go             ← interface: Renderer { Render(scores) → SVG string }
-    └── svg.go                  ← parametric SVG implementation
+    ├── svg.go                  ← parametric SVG generation (Bézier geometry, droplets)
+    └── color.go                ← HSL color space, warmth ramp interpolation
 ```
 
 ### API contract
@@ -84,7 +88,7 @@ Missing variables are a fatal error — Jackfruit fails the entire request when 
 
 ## Key Design Decisions
 
-- **Interfaces for swappability:** `Resolver` for IP geoloc (MVP: MaxMind GeoLite2), `Renderer` for SVG (MVP: parametric SVG, future: ASCII, diffusion). Design against the interface, not the implementation.
+- **Interfaces for swappability:** `ipResolver` for IP geoloc (MVP: MaxMind GeoLite2, returns coords only), `Renderer` for SVG (MVP: parametric SVG, future: ASCII, diffusion). Design against the interface, not the implementation.
 - **Lineage pass-through:** Don't flatten Jackfruit's per-variable response. Each variable carries its own `ref_timestamp`, `actual_lat/lon`, and `lineage` because variables may come from different datasets or grids.
 - **Temperature unit conversion:** Jackfruit stores and returns temperature in °C. No conversion needed in Buttprint API — unit conversion happens at ingestion time in the pipeline.
 - **Rate limiting:** In-memory per-IP (MVP). `golang.org/x/time/rate` token bucket. Behind an interface for future Redis upgrade.
