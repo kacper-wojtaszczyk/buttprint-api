@@ -1,14 +1,18 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 type Config struct {
-	Port          string
-	JackfruitURL  string
-	MaxMindDBPath string
+	Port               string
+	JackfruitURL       string
+	MaxMindDBPath      string
+	CORSAllowedOrigins []string
 }
 
-func getEnv(key, fallback string) string {
+func getEnvString(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
 	}
@@ -16,10 +20,23 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
+func getEnvStringSlice(key, sep string, fallback []string) []string {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	parts := strings.Split(v, sep)
+	for i := range parts {
+		parts[i] = strings.TrimSpace(parts[i])
+	}
+	return parts
+}
+
 func Load() *Config {
 	return &Config{
-		Port:          getEnv("PORT", "8080"),
-		JackfruitURL:  getEnv("JACKFRUIT_URL", "http://localhost:8080"),
-		MaxMindDBPath: getEnv("MAXMIND_DB_PATH", "/data/GeoLite2-City.mmdb"),
+		Port:               getEnvString("PORT", "8080"),
+		JackfruitURL:       getEnvString("JACKFRUIT_URL", "http://localhost:8080"),
+		MaxMindDBPath:      getEnvString("MAXMIND_DB_PATH", "/data/GeoLite2-City.mmdb"),
+		CORSAllowedOrigins: getEnvStringSlice("CORS_ALLOWED_ORIGINS", ",", []string{"http://localhost:5173"}),
 	}
 }

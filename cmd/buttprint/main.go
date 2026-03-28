@@ -19,6 +19,7 @@ import (
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/jackfruit"
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/render"
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/scoring"
+	"github.com/rs/cors"
 )
 
 type app struct {
@@ -51,9 +52,20 @@ func newApp() (*app, error) {
 
 	mux := http.NewServeMux()
 	api.NewHandler(service, ipResolver, logger.With("component", "api")).RegisterRoutes(mux)
+
+	c := cors.New(cors.Options{
+		AllowedOrigins: cfg.CORSAllowedOrigins,
+		AllowedMethods: []string{"GET", "OPTIONS"},
+		AllowedHeaders: []string{"Accept", "Content-Type"},
+		MaxAge:         86400,
+	})
+
+	var h http.Handler = mux
+	h = c.Handler(h)
+
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,
-		Handler:      mux,
+		Handler:      h,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 25 * time.Second,
 		IdleTimeout:  60 * time.Second,
