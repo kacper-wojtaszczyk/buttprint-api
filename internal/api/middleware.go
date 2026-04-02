@@ -83,6 +83,10 @@ func LoggingMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 			// requests appear only in Recovery's error log, not here.
 			next.ServeHTTP(wrapped, r)
 
+			if r.URL.Path == "/health" {
+				return
+			}
+
 			status := wrapped.status
 			if status == 0 {
 				status = http.StatusOK
