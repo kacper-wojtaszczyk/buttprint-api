@@ -84,7 +84,7 @@ func TestRecoveryMiddleware_NoPanic(t *testing.T) {
 
 func TestStatusRecorder_CapturesStatus(t *testing.T) {
 	w := httptest.NewRecorder()
-	rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+	rec := &statusRecorder{ResponseWriter: w}
 
 	rec.WriteHeader(http.StatusNotFound)
 
