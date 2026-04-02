@@ -40,6 +40,28 @@ func TestRecoveryMiddleware_PanicReturns500(t *testing.T) {
 	}
 }
 
+func TestRecoveryMiddleware_PanicAfterWrite(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("partial"))
+		panic("mid-write kaboom")
+	})
+	wrapped := RecoveryMiddleware(discardLogger())(handler)
+
+	req := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	wrapped.ServeHTTP(w, req)
+
+	// Headers were already sent — recovery must not attempt a second WriteHeader.
+	// The original 200 status should be preserved, not overwritten to 500.
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200 (already sent before panic)", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "partial") {
+		t.Error("expected partial body from before panic")
+	}
+}
+
 func TestRecoveryMiddleware_NoPanic(t *testing.T) {
 	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

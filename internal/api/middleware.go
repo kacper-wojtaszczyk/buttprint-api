@@ -7,20 +7,46 @@ import (
 	"time"
 )
 
+type recoverWriter struct {
+	http.ResponseWriter
+	written bool
+}
+
+func (rw *recoverWriter) WriteHeader(code int) {
+	rw.written = true
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func (rw *recoverWriter) Write(b []byte) (int, error) {
+	rw.written = true
+	return rw.ResponseWriter.Write(b)
+}
+
+func (rw *recoverWriter) Unwrap() http.ResponseWriter {
+	return rw.ResponseWriter
+}
+
 func RecoveryMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rec := &recoverWriter{ResponseWriter: w}
 			defer func() {
 				if err := recover(); err != nil {
 					logger.Error("panic recovered",
 						"error", err,
 						"stack", string(debug.Stack()),
-						"path", r.URL.Path,
+						"method", r.Method,
+						"path", r.URL.RequestURI(),
 					)
-					writeError(w, http.StatusInternalServerError, "internal server error")
+					if !rec.written {
+						writeError(w, http.StatusInternalServerError, "internal server error")
+					}
+					// If headers were already sent, the response is
+					// already in-flight — log and let the connection
+					// close with a truncated body.
 				}
 			}()
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(rec, r)
 		})
 	}
 }
@@ -49,7 +75,7 @@ func LoggingMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 
 			logger.Info("request",
 				"method", r.Method,
-				"path", r.URL.Path,
+				"path", r.URL.RequestURI(),
 				"status", wrapped.status,
 				"duration", time.Since(start),
 				"client_ip", clientIP(r),
