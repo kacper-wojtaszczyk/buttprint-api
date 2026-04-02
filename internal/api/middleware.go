@@ -78,12 +78,20 @@ func LoggingMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 			start := time.Now()
 			wrapped := &statusRecorder{ResponseWriter: w}
 
+			// Note: if the handler panics, RecoveryMiddleware (outermost)
+			// catches it and the log call below never executes. Panicked
+			// requests appear only in Recovery's error log, not here.
 			next.ServeHTTP(wrapped, r)
+
+			status := wrapped.status
+			if status == 0 {
+				status = http.StatusOK
+			}
 
 			logger.Info("request",
 				"method", r.Method,
 				"path", r.URL.RequestURI(),
-				"status", wrapped.status,
+				"status", status,
 				"duration", time.Since(start),
 				"client_ip", clientIP(r),
 			)
