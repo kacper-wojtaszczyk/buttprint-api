@@ -62,6 +62,8 @@ func newApp() (*app, error) {
 
 	var h http.Handler = mux
 	h = c.Handler(h)
+	h = api.LoggingMiddleware(logger.With("component", "http"))(h)
+	h = api.RecoveryMiddleware(logger.With("component", "http"))(h)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,
