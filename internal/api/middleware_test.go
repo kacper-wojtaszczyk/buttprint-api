@@ -28,14 +28,15 @@ func TestRecoveryMiddleware_PanicReturns500(t *testing.T) {
 		t.Errorf("status = %d, want 500", w.Code)
 	}
 
+	body := w.Body.String()
 	var errResp ErrorResponse
-	if err := json.NewDecoder(w.Body).Decode(&errResp); err != nil {
+	if err := json.NewDecoder(strings.NewReader(body)).Decode(&errResp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
 	if errResp.Error == "" {
 		t.Error("expected error message in body")
 	}
-	if strings.Contains(w.Body.String(), "kaboom") {
+	if strings.Contains(body, "kaboom") {
 		t.Error("panic message leaked to client")
 	}
 }
