@@ -33,16 +33,25 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          show_full_output: 'true'  # TODO: remove after tuning
           classify_inline_comments: 'true'
           include_fix_links: 'true'
           prompt: |
-            Review this pull request thoroughly. This is a Go HTTP service
+            Review PR #${{ github.event.pull_request.number }} in this Go HTTP service
             (Go 1.26, net/http standard library, no framework, no CGO).
 
-            ## Environment
+            ## How to start
+
             You are already on the PR merge ref. Dependencies are pre-downloaded (go mod download).
-            Do NOT run git checkout or switch branches — just start reviewing.
+            Do NOT run git checkout or switch branches. The PR number is already known —
+            skip discovery commands and go straight to the diff.
+
+            1. Run `gh pr diff ${{ github.event.pull_request.number }}` to get the full diff.
+            2. Read all changed files in parallel (use multiple Read tool calls in one message).
+            3. Run verification commands in parallel: `go vet ./...`, `go test ./...`, `gofmt -l .`
+            4. Post inline comments, then a summary comment.
+
+            Maximize parallel tool calls throughout — batch independent reads, verifications,
+            and inline comments into single messages whenever possible.
 
             ## What to check
 
@@ -104,6 +113,8 @@ jobs:
             ## Output format
             - Post specific issues as inline comments on the relevant diff lines.
               Tag severity: 🔴 bug/must-fix, 🟡 nit/suggestion, 🟣 pre-existing.
+            - When posting inline comments, set `confirmed` to `false` so comments are
+              buffered and classified by severity before posting.
             - Post a single summary comment on the PR with: what the PR does well,
               overall assessment, and a count of findings by severity.
           claude_args: |
