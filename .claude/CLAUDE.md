@@ -102,3 +102,12 @@ Missing variables are a fatal error — Jackfruit fails the entire request when 
 - Environment variables for all configuration
 - Standard library HTTP server with Go 1.22+ routing: `mux.HandleFunc("GET /path", handler)`
 - Timestamps: `time.RFC3339` constant, `time.Parse` / `time.Format`
+
+## Code Review
+
+When reviewing PRs (automated or `@claude`-triggered):
+
+- **Flag** unchecked error returns, missing context propagation, incorrect domain error mapping (`ErrNoData`/`ErrUpstream`), RFC 3339 violations, nil pointer risks on nullable lineage, broken interface contracts, response body leaks, score range violations (must be [0,1]), scoring weight drift (must sum to 1.0)
+- **Skip** formatting and struct alignment (gofmt handles these), pre-existing debt unrelated to the PR
+- **Verify** with `go vet ./...`, `go test ./...`, `make check` before posting findings
+- **Severity tags:** 🔴 must-fix, 🟡 nit, 🟣 pre-existing
