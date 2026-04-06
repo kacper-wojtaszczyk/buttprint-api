@@ -54,7 +54,10 @@ func newApp() (*app, error) {
 	mux := http.NewServeMux()
 	api.NewHandler(service, ipResolver, logger.With("component", "api")).RegisterRoutes(mux)
 
-	rl := api.NewRateLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst, logger.With("component", "ratelimit"))
+	rl, err := api.NewRateLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst, logger.With("component", "ratelimit"))
+	if err != nil {
+		return nil, fmt.Errorf("initializing rate limiter: %w", err)
+	}
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: cfg.CORSAllowedOrigins,
@@ -63,11 +66,15 @@ func newApp() (*app, error) {
 		MaxAge:         86400,
 	})
 
+	// Middleware chain, written innermost-first. Request flow on the way in
+	// is the reverse: Recovery → SecurityHeaders → Logging → CORS → RateLimit → mux.
+	// SecurityHeaders sits above CORS and RateLimit so 429s and preflights carry
+	// the headers. Recovery is outermost so it catches panics from anything inside.
 	var h http.Handler = mux
-	h = api.SecurityHeadersMiddleware(h)
 	h = rl.Handler(h)
 	h = c.Handler(h)
 	h = api.LoggingMiddleware(logger.With("component", "http"))(h)
+	h = api.SecurityHeadersMiddleware(h)
 	h = api.RecoveryMiddleware(logger.With("component", "http"))(h)
 
 	server := &http.Server{
@@ -111,10 +118,10 @@ func (a *app) shutdown(ctx context.Context) {
 	if err := a.server.Shutdown(ctx); err != nil {
 		a.logger.Error("server shutdown error", "error", err)
 	}
+	a.rateLimiter.Stop()
 	if err := a.ipResolver.Close(); err != nil {
 		a.logger.Error("ip resolver shutdown error", "error", err)
 	}
-	a.rateLimiter.Stop()
 	a.logger.Info("server stopped")
 }
 

@@ -5,10 +5,20 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
+func newTestLimiter(t *testing.T, rps float64, burst int) *RateLimiter {
+	t.Helper()
+	rl, err := NewRateLimiter(rps, burst, discardLogger())
+	if err != nil {
+		t.Fatalf("NewRateLimiter: %v", err)
+	}
+	return rl
+}
+
 func TestRateLimiter_AllowsUnderLimit(t *testing.T) {
-	rl := NewRateLimiter(10, 10, discardLogger())
+	rl := newTestLimiter(t, 10, 10)
 	defer rl.Stop()
 
 	handler := rl.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -26,7 +36,7 @@ func TestRateLimiter_AllowsUnderLimit(t *testing.T) {
 }
 
 func TestRateLimiter_BlocksOverLimit(t *testing.T) {
-	rl := NewRateLimiter(1, 1, discardLogger())
+	rl := newTestLimiter(t, 1, 1)
 	defer rl.Stop()
 
 	handler := rl.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -66,7 +76,7 @@ func TestRateLimiter_BlocksOverLimit(t *testing.T) {
 }
 
 func TestRateLimiter_IndependentPerIP(t *testing.T) {
-	rl := NewRateLimiter(1, 1, discardLogger())
+	rl := newTestLimiter(t, 1, 1)
 	defer rl.Stop()
 
 	handler := rl.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -89,4 +99,77 @@ func TestRateLimiter_IndependentPerIP(t *testing.T) {
 	if w2.Code != http.StatusOK {
 		t.Errorf("IP 2: status = %d, want 200", w2.Code)
 	}
+}
+
+func TestRateLimiter_CleanupEvictsStale(t *testing.T) {
+	rl := newTestLimiter(t, 1, 1)
+	defer rl.Stop()
+
+	rl.getLimiter("fresh.ip")
+	rl.getLimiter("stale.ip")
+
+	rl.mu.Lock()
+	rl.clients["stale.ip"].lastSeen = time.Now().Add(-30 * time.Minute)
+	rl.mu.Unlock()
+
+	rl.cleanup()
+
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	if _, ok := rl.clients["stale.ip"]; ok {
+		t.Error("stale client was not evicted")
+	}
+	if _, ok := rl.clients["fresh.ip"]; !ok {
+		t.Error("fresh client was incorrectly evicted")
+	}
+}
+
+func TestNewRateLimiter_RejectsInvalidConfig(t *testing.T) {
+	cases := []struct {
+		name  string
+		rps   float64
+		burst int
+	}{
+		{"zero rps", 0, 10},
+		{"negative rps", -1, 10},
+		{"zero burst", 10, 0},
+		{"negative burst", 10, -5},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rl, err := NewRateLimiter(tc.rps, tc.burst, discardLogger())
+			if err == nil {
+				rl.Stop()
+				t.Fatalf("expected error for rps=%v burst=%d, got nil", tc.rps, tc.burst)
+			}
+			if rl != nil {
+				t.Errorf("expected nil RateLimiter on error, got %+v", rl)
+			}
+		})
+	}
+}
+
+func TestRateLimiter_StopClosesDoneChannel(t *testing.T) {
+	rl := newTestLimiter(t, 1, 1)
+	rl.Stop()
+
+	select {
+	case <-rl.done:
+	default:
+		t.Error("done channel was not closed by Stop()")
+	}
+}
+
+func TestRateLimiter_StopIsIdempotent(t *testing.T) {
+	rl := newTestLimiter(t, 1, 1)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("repeated Stop() panicked: %v", r)
+		}
+	}()
+
+	rl.Stop()
+	rl.Stop()
+	rl.Stop()
 }

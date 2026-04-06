@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -15,15 +16,23 @@ type client struct {
 }
 
 type RateLimiter struct {
-	clients map[string]*client
-	mu      sync.Mutex
-	rps     float64
-	burst   int
-	logger  *slog.Logger
-	done    chan struct{}
+	clients  map[string]*client
+	mu       sync.Mutex
+	rps      float64
+	burst    int
+	logger   *slog.Logger
+	done     chan struct{}
+	stopOnce sync.Once
 }
 
-func NewRateLimiter(rps float64, burst int, logger *slog.Logger) *RateLimiter {
+func NewRateLimiter(rps float64, burst int, logger *slog.Logger) (*RateLimiter, error) {
+	if rps <= 0 {
+		return nil, fmt.Errorf("rate limit rps must be > 0, got %v", rps)
+	}
+	if burst <= 0 {
+		return nil, fmt.Errorf("rate limit burst must be > 0, got %d", burst)
+	}
+
 	rl := &RateLimiter{
 		clients: make(map[string]*client),
 		rps:     rps,
@@ -45,7 +54,7 @@ func NewRateLimiter(rps float64, burst int, logger *slog.Logger) *RateLimiter {
 		}
 	}()
 
-	return rl
+	return rl, nil
 }
 
 func (rl *RateLimiter) getLimiter(ip string) *rate.Limiter {
@@ -95,5 +104,7 @@ func (rl *RateLimiter) Handler(next http.Handler) http.Handler {
 }
 
 func (rl *RateLimiter) Stop() {
-	close(rl.done)
+	rl.stopOnce.Do(func() {
+		close(rl.done)
+	})
 }
