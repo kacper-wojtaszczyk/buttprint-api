@@ -23,10 +23,11 @@ import (
 )
 
 type app struct {
-	cfg        *config.Config
-	logger     *slog.Logger
-	server     *http.Server
-	ipResolver io.Closer
+	cfg         *config.Config
+	logger      *slog.Logger
+	server      *http.Server
+	ipResolver  io.Closer
+	rateLimiter *api.RateLimiter
 }
 
 func newApp() (*app, error) {
@@ -53,6 +54,8 @@ func newApp() (*app, error) {
 	mux := http.NewServeMux()
 	api.NewHandler(service, ipResolver, logger.With("component", "api")).RegisterRoutes(mux)
 
+	rl := api.NewRateLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst, logger.With("component", "ratelimit"))
+
 	c := cors.New(cors.Options{
 		AllowedOrigins: cfg.CORSAllowedOrigins,
 		AllowedMethods: []string{"GET", "OPTIONS"},
@@ -61,6 +64,8 @@ func newApp() (*app, error) {
 	})
 
 	var h http.Handler = mux
+	h = api.SecurityHeadersMiddleware(h)
+	h = rl.Handler(h)
 	h = c.Handler(h)
 	h = api.LoggingMiddleware(logger.With("component", "http"))(h)
 	h = api.RecoveryMiddleware(logger.With("component", "http"))(h)
@@ -74,10 +79,11 @@ func newApp() (*app, error) {
 	}
 
 	return &app{
-		cfg:        cfg,
-		logger:     logger,
-		server:     server,
-		ipResolver: ipResolver,
+		cfg:         cfg,
+		logger:      logger,
+		server:      server,
+		ipResolver:  ipResolver,
+		rateLimiter: rl,
 	}, nil
 }
 
@@ -108,6 +114,7 @@ func (a *app) shutdown(ctx context.Context) {
 	if err := a.ipResolver.Close(); err != nil {
 		a.logger.Error("ip resolver shutdown error", "error", err)
 	}
+	a.rateLimiter.Stop()
 	a.logger.Info("server stopped")
 }
 

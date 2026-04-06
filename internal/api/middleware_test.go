@@ -114,3 +114,34 @@ func TestLoggingMiddleware_Transparent(t *testing.T) {
 		t.Errorf("body = %q, want \"created\"", w.Body.String())
 	}
 }
+
+func TestSecurityHeadersMiddleware(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
+	wrapped := SecurityHeadersMiddleware(handler)
+
+	req := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	wrapped.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200", w.Code)
+	}
+	if w.Body.String() != "ok" {
+		t.Errorf("body = %q, want \"ok\"", w.Body.String())
+	}
+
+	checks := map[string]string{
+		"X-Content-Type-Options":  "nosniff",
+		"X-Frame-Options":         "DENY",
+		"Content-Security-Policy": "default-src 'none'",
+		"Cache-Control":           "no-store",
+	}
+	for header, want := range checks {
+		if got := w.Header().Get(header); got != want {
+			t.Errorf("%s = %q, want %q", header, got, want)
+		}
+	}
+}
