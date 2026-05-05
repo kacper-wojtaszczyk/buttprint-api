@@ -16,6 +16,8 @@ import (
 	"github.com/kacper-wojtaszczyk/buttprint-api/internal/domain"
 )
 
+const userAgent = "buttprint-api/1.0"
+
 type Client struct {
 	httpClient *http.Client
 	baseURL    string
@@ -66,6 +68,7 @@ func (c *Client) GetEnvironmentalData(
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct environmental req: %w", err)
 	}
+	req.Header.Set("User-Agent", userAgent)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

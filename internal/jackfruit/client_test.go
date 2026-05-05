@@ -338,6 +338,37 @@ func TestGetEnvironmentalData_URLConstruction(t *testing.T) {
 	}
 }
 
+// TestGetEnvironmentalData_SetsUserAgent verifies the client identifies itself
+// to jackfruit via a stable User-Agent header, so jackfruit's request log can
+// attribute traffic to buttprint-api.
+func TestGetEnvironmentalData_SetsUserAgent(t *testing.T) {
+	refTime := time.Date(2026, 3, 12, 12, 0, 0, 0, time.UTC)
+
+	var gotReq *http.Request
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		gotReq = r
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"variables":[]}`))
+	})
+
+	_, _ = client.GetEnvironmentalData(
+		context.Background(),
+		52.52, 13.405,
+		refTime,
+		[]string{"pm2p5"},
+	)
+
+	if gotReq == nil {
+		t.Fatal("handler was not called")
+	}
+	if got, want := gotReq.Header.Get("User-Agent"), userAgent; got != want {
+		t.Errorf("User-Agent: got %q, want %q", got, want)
+	}
+	if vals := gotReq.Header.Values("User-Agent"); len(vals) != 1 {
+		t.Errorf("User-Agent should be single-valued, got %d values: %v", len(vals), vals)
+	}
+}
+
 func TestGetEnvironmentalData_URLConstruction_EdgeCases(t *testing.T) {
 	refTime := time.Date(2026, 3, 12, 12, 0, 0, 0, time.UTC)
 
