@@ -72,8 +72,12 @@ jobs:
 
       - name: Smoke test
         run: |
-          sleep 15
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.buttprint.eu/health)
+          HTTP_STATUS=""
+          for i in 1 2 3 4 5; do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.buttprint.eu/health)
+            [ "$HTTP_STATUS" = "204" ] && break
+            sleep 5
+          done
           if [ "$HTTP_STATUS" != "204" ]; then
             echo "ERROR: /health returned ${HTTP_STATUS}, expected 204"
             exit 1
