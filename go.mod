@@ -1,12 +1,12 @@
 module github.com/kacper-wojtaszczyk/buttprint-api
 
-go 1.26
+go 1.26.0
 
 require (
 	github.com/google/uuid v1.6.0
 	github.com/oschwald/geoip2-golang v1.13.0
 	github.com/rs/cors v1.11.1
-	golang.org/x/time v0.15.0
+	golang.org/x/time v0.16.0
 )
 
 require (
