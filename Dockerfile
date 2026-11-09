@@ -11,7 +11,7 @@ RUN --mount=type=secret,id=maxmind_credentials \
     mkdir -p /data && \
     mv /tmp/GeoLite2-City_*/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb
 
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
